@@ -199,17 +199,28 @@ async function handleFileUpload(event, itemId) {
     statusEl.textContent = `Subiendo ${file.name}... (puede tardar)`;
     progressFill.style.width = '30%';
 
-    // Llamada a la Edge Function (upload-to-drive) usando cliente Supabase
-    const { data: result, error } = await window.supabaseClient.functions.invoke('upload-to-drive', {
+    // Llamada a la Edge Function (upload-to-drive)
+    const response = await fetch(window.EDGE_FUNCTION_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'apikey': SUPABASE_ANON_KEY,
+      },
       body: formData,
     });
 
     progressFill.style.width = '80%';
 
-    if (error) {
-      throw new Error(error.message || `Error en función: ${error}`);
+    if (!response.ok) {
+      let errMsg = `Error HTTP ${response.status}`;
+      try {
+        const errBody = await response.json();
+        errMsg = errBody.error || errMsg;
+      } catch (_) { /* no JSON body */ }
+      throw new Error(errMsg);
     }
 
+    const result = await response.json();
     progressFill.style.width = '100%';
     statusEl.textContent = '✅ ¡Archivo entregado!';
 
