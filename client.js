@@ -202,6 +202,9 @@ async function handleFileUpload(event, itemId) {
     // Llamada a la Edge Function (upload-to-drive)
     const response = await fetch(window.EDGE_FUNCTION_URL, {
       method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${window.SUPABASE_ANON_KEY}`
+      },
       body: formData,
     });
 
