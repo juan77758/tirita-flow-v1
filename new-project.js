@@ -170,13 +170,28 @@ async function createClientDriveFolder(projectName) {
 // Para que la Cloud Function (Service Account) pueda subir archivos a la carpeta
 // de la agencia (que creó esta carpeta original), debemos darle acceso de Editor 'writer' al folder.
 async function grantServiceAccountAccess(folderId) {
-  // Reemplazar este correo por el correo de la Service Account real que uses
-  const SERVICE_ACCOUNT_EMAIL = 'tirita-uploader@proyecto-tirita.iam.gserviceaccount.com'; // TO-DO UPDATE
+  const SERVICE_ACCOUNT_EMAIL = 'proyecto-tirita@appspot.gserviceaccount.com';
   
-  // Como no configuramos el JSON completo acá, la UI puede saltarse esto 
-  // si configuramos la Service Account como 'Owner' total o usamos delegación de dominio,
-  // pero el método simple es compartir el folder:
-  console.log("Recordatorio: La Cloud Function necesita permisos en la carpeta:", folderId);
+  const response = await fetch(`https://www.googleapis.com/drive/v3/files/${folderId}/permissions`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${providerToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      role: 'writer',
+      type: 'user',
+      emailAddress: SERVICE_ACCOUNT_EMAIL
+    })
+  });
+
+  if (!response.ok) {
+    const err = await response.json();
+    console.error('Error compartiendo carpeta con la Service Account:', err);
+    throw new Error('No se pudo compartir la carpeta.');
+  }
+
+  console.log("✅ Permisos de escritura otorgados al robot (Service Account):", SERVICE_ACCOUNT_EMAIL);
   return true; 
 }
 
