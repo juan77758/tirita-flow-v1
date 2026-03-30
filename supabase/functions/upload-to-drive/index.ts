@@ -46,6 +46,13 @@ serve(async (req) => {
       scopes: ['https://www.googleapis.com/auth/drive.file'],
     });
 
+    // Obtener access token para usar con fetch nativo
+    const tokenResponse = await client.authorize();
+    const accessToken = tokenResponse.access_token;
+    if (!accessToken) {
+      throw new Error('No se pudo obtener access token de Google.');
+    }
+
     // 4. Transformar el archivo para subir a Drive
     const fileContent = await file.arrayBuffer();
     
@@ -79,17 +86,28 @@ serve(async (req) => {
     bodyBuffer.set(suffixBytes, prefixBytes.length + fileContent.byteLength);
 
     console.log("🚀 Subiendo archivo a Google Drive...");
-    const driveRes = await client.request({
-      url: 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink',
-      method: 'POST',
-      headers: {
-        'Content-Type': `multipart/related; boundary=${boundary}`,
-        'Content-Length': String(bodyBuffer.length),
-      },
-      data: bodyBuffer,
-    });
+    // Usar fetch nativo en vez de client.request() porque gaxios
+    // serializa Uint8Array a JSON, corrompiendo el cuerpo multipart.
+    const driveRes = await fetch(
+      'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': `multipart/related; boundary=${boundary}`,
+          'Content-Length': String(bodyBuffer.length),
+        },
+        body: bodyBuffer,
+      }
+    );
 
-    const fileData = driveRes.data as any;
+    if (!driveRes.ok) {
+      const errText = await driveRes.text();
+      console.error("Google Drive API Error:", driveRes.status, errText);
+      throw new Error(`Google Drive API error ${driveRes.status}: ${errText}`);
+    }
+
+    const fileData = await driveRes.json();
     console.log("✅ Google Drive Response:", fileData.id);
 
     // 5. Actualizar la base de datos de Supabase
