@@ -95,6 +95,7 @@ async function loadProject() {
 
     if (nError) throw nError;
     feedbackNotes = notes || [];
+    console.log(`📋 Feedback notes fetched: ${feedbackNotes.length}`, feedbackNotes);
 
     // Render UI
     projectNameSidebar.textContent = projectData.name;
@@ -334,13 +335,92 @@ async function submitFeedback(x, y) {
 
 // ── Render Pins ──
 function renderPins() {
-  pinsContainer.innerHTML = feedbackNotes.map((note, i) => `
-    <div class="feedback-pin ${note.status === 'open' ? 'pin-open' : 'pin-resolved'}" 
-      style="left:${note.x_coordinate}%;top:${note.y_coordinate}%;"
-      title="${escapeHtml(note.comment_text)}">
-      ${i + 1}
+  console.log(`🔵 renderPins() called — Total notes: ${feedbackNotes.length}`);
+  
+  if (!pinsContainer) {
+    console.error('❌ #pins-container not found in DOM!');
+    return;
+  }
+
+  if (feedbackNotes.length === 0) {
+    console.log('⚪ No feedback notes to render.');
+    pinsContainer.innerHTML = '';
+    return;
+  }
+
+  pinsContainer.innerHTML = feedbackNotes.map((note, i) => {
+    console.log(`  📌 Pin ${i + 1}: x=${note.x_coordinate}%, y=${note.y_coordinate}%, status=${note.status}, text="${note.comment_text}"`);
+    return `
+      <div class="feedback-pin ${note.status === 'resolved' ? 'resolved' : 'open'}" 
+        style="left:${note.x_coordinate}%;top:${note.y_coordinate}%;"
+        data-index="${i}">
+        <div class="pin-number">${i + 1}</div>
+      </div>
+    `;
+  }).join('');
+
+  console.log(`✅ renderPins() complete — ${pinsContainer.children.length} pins injected into DOM`);
+}
+
+pinsContainer.addEventListener('click', (e) => {
+  const pin = e.target.closest('.feedback-pin');
+  if (!pin) return;
+  const index = pin.getAttribute('data-index');
+  const note = feedbackNotes[index];
+  showNoteModal(note, index);
+});
+
+function showNoteModal(note, index) {
+  feedbackModalContainer.style.display = 'block';
+  feedbackModalContainer.innerHTML = `
+    <div class="feedback-modal-backdrop" id="feedback-backdrop">
+      <div class="feedback-modal">
+        <h3 style="margin:0 0 12px 0;color:var(--text-primary);">📌 Comentario #${parseInt(index) + 1}</h3>
+        <p style="font-size:14px;color:var(--text-secondary);margin:0 0 16px 0;line-height:1.5;white-space:pre-wrap;">${escapeHtml(note.comment_text)}</p>
+        
+        <div style="display:flex; justify-content: space-between; align-items: center; margin-top:12px;">
+          <span style="font-size:12px;color:var(--text-muted);">
+            Estado: <strong style="color:${note.status === 'resolved' ? 'var(--accent-green)' : 'var(--accent-red)'}">${note.status === 'resolved' ? 'Resuelto' : 'Pendiente'}</strong>
+          </span>
+          <div class="confirm-modal-actions">
+            <button class="btn btn-secondary btn-sm" id="close-note">Cerrar</button>
+            ${note.status === 'open' ? `<button class="btn btn-primary btn-sm" id="resolve-note">Marcar Resuelto</button>` : ''}
+          </div>
+        </div>
+      </div>
     </div>
-  `).join('');
+  `;
+
+  document.getElementById('close-note').addEventListener('click', () => {
+    feedbackModalContainer.style.display = 'none';
+  });
+  document.getElementById('feedback-backdrop').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) feedbackModalContainer.style.display = 'none';
+  });
+  
+  const resolveBtn = document.getElementById('resolve-note');
+  if (resolveBtn) {
+    resolveBtn.addEventListener('click', () => markNoteResolved(note.id, index));
+  }
+}
+
+async function markNoteResolved(noteId, index) {
+  try {
+    const { error } = await window.supabaseClient
+      .from('feedback_notes')
+      .update({ status: 'resolved' })
+      .eq('id', noteId);
+
+    if (error) throw error;
+
+    feedbackNotes[index].status = 'resolved';
+    renderPins();
+    feedbackModalContainer.style.display = 'none';
+    showToast('Comentario marcado como resuelto.', 'success');
+  } catch (err) {
+    console.error('Error updating note:', err);
+    showToast('Error al actualizar el comentario.', 'error');
+  }
 }
 
 // ── Sidebar Toggle ──
