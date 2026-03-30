@@ -119,7 +119,7 @@ async function loadProjects() {
   try {
     const { data: allProjects, error } = await window.supabaseClient
       .from('projects')
-      .select('*')
+      .select('*, checklist_items(*)')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -138,7 +138,21 @@ async function loadProjects() {
       }
     });
 
+    // Update Top Stats
+    const statTotal = document.getElementById('stat-total');
+    const statPending = document.getElementById('stat-pending');
+    const statCompleted = document.getElementById('stat-completed');
+    
+    if (statTotal) statTotal.textContent = myProjects.length;
+    
+    let totalItems = 0;
+    let completedItems = 0;
+
     if (myProjects.length === 0) {
+      if (statTotal) statTotal.textContent = '0';
+      if (statPending) statPending.textContent = '0';
+      if (statCompleted) statCompleted.textContent = '0';
+
       if (projectsGrid) {
         projectsGrid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding: 2rem; color: var(--text-muted);">Aún no tienes proyectos. Crea uno para comenzar.</div>';
       }
@@ -149,12 +163,21 @@ async function loadProjects() {
           const meta = JSON.parse(p.target_url);
           p.target_url = meta.url;
         } catch(e) {}
+        
+        if (p.checklist_items) {
+          totalItems += p.checklist_items.length;
+          completedItems += p.checklist_items.filter(i => i.status === 'completed').length;
+        }
+
         renderProjectCard(p);
       });
+      
+      if (statPending) statPending.textContent = (totalItems - completedItems).toString();
+      if (statCompleted) statCompleted.textContent = completedItems.toString();
     }
   } catch (err) {
     console.error('Error fetching projects:', err);
-    loadingState.style.display = 'none';
+    if (projectsGrid) projectsGrid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding: 2rem; color: var(--text-muted);">Error al cargar proyectos.</div>';
     showToast('Error al cargar proyectos.', 'error');
   }
 }
@@ -167,6 +190,44 @@ function renderProjectCard(project) {
 
   const clientUrl = `${window.location.origin}/client.html?id=${project.magic_link_hash}`;
 
+  let checklistHtml = '<div class="project-checklist" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">';
+  if (project.checklist_items && project.checklist_items.length > 0) {
+    // Sort items: pending first, completed last
+    const sortedItems = [...project.checklist_items].sort((a, b) => {
+      if (a.status === b.status) return 0;
+      return a.status === 'pending' ? -1 : 1;
+    });
+
+    checklistHtml += '<h4 style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; letter-spacing: 0.5px;">Archivos Solicitados</h4>';
+    
+    sortedItems.forEach(item => {
+      if (item.status === 'completed' && item.file_url) {
+        checklistHtml += `
+          <div style="font-size: 13px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 6px 8px; background: rgba(0, 255, 128, 0.05); border-radius: 4px; border: 1px solid rgba(0, 255, 128, 0.1);">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="color: #4CAF50;">✓</span>
+              <span style="color: #eee;">${escapeHtml(item.title)}</span>
+            </div>
+            <a href="${item.file_url}" target="_blank" style="color: var(--accent-blue); text-decoration: none; font-weight: 500; font-size: 12px; display:flex; align-items:center; gap:4px; padding: 4px 8px; background: rgba(0, 150, 255, 0.1); border-radius: 4px; transition: all 0.2s;"><span>Abrir</span> <span style="font-size: 10px;">↗</span></a>
+          </div>
+        `;
+      } else {
+        checklistHtml += `
+          <div style="font-size: 13px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 6px 8px; opacity: 0.7;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="color: var(--text-muted);">⏳</span>
+              <span style="color: var(--text-secondary);">${escapeHtml(item.title)}</span>
+            </div>
+            <span style="font-size: 11px; color: var(--text-muted); border: 1px dashed var(--border-color); padding: 2px 6px; border-radius: 4px;">Pendiente</span>
+          </div>
+        `;
+      }
+    });
+  } else {
+    checklistHtml += `<div style="font-size: 12px; color: var(--text-muted); text-align: center;">No hay archivos solicitados.</div>`;
+  }
+  checklistHtml += '</div>';
+
   card.innerHTML = `
     <div class="project-header">
       <h3 class="project-title">${escapeHtml(project.name)}</h3>
@@ -175,7 +236,7 @@ function renderProjectCard(project) {
     <div class="project-meta">
       Creado: ${new Date(project.created_at).toLocaleDateString()}
     </div>
-    <div class="project-actions">
+    <div class="project-actions" style="margin-bottom: 15px;">
       <button class="btn btn-secondary btn-sm" onclick="copyMagicLink('${clientUrl}')">
         🔗 Copiar Enlace Cliente
       </button>
@@ -186,7 +247,7 @@ function renderProjectCard(project) {
         🗑️
       </button>
     </div>
-    <!-- Mini progress indicator could go here with a join query on checklist_items -->
+    ${checklistHtml}
   `;
   projectsGrid.appendChild(card);
 }
