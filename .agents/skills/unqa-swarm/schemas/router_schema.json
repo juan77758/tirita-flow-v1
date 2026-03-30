@@ -1,0 +1,16 @@
+{
+  "job_id": "job_{{timestamp}}_{{short_desc}}",
+  "project_name": "{{project_name}}",
+  "architect_name": "{{architect_agent_name}}",
+  "manager_name": "{{manager_agent_name}}",
+  "owner_name": null,
+  "global_status": "executing",
+  "batch_limit": 3,
+  "created_at": "{{iso_timestamp}}",
+  "updated_at": "{{iso_timestamp}}",
+  "tasks": {
+    "00_setup": "pending",
+    "01_example_task": "pending",
+    "02_example_task": "pending"
+  }
+}

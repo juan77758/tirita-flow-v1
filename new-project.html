@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Tirita Flow - Configura un nuevo proyecto y genera un enlace mágico para tu cliente.">
+  <title>Tirita Flow — Nuevo Proyecto</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🩹</text></svg>">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Navbar -->
+    <nav class="navbar">
+      <a href="index.html" class="navbar-brand" style="text-decoration:none;">
+        <div class="navbar-logo">🩹</div>
+        <div class="navbar-title"><span>Tirita</span> Flow</div>
+      </a>
+      <div class="navbar-links">
+        <a href="index.html" class="btn btn-ghost">← Volver al Dashboard</a>
+      </div>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="page-header" style="text-align:center;">
+      <h1>Nuevo <span class="accent">Proyecto</span></h1>
+      <p style="margin:0 auto;">Configura los datos del cliente y define el checklist de entregables.</p>
+    </div>
+
+    <!-- Form -->
+    <div class="form-container">
+      <div class="form-card">
+        <form id="project-form">
+          <!-- Client Name -->
+          <div class="form-group">
+            <label class="form-label" for="client-name">Nombre del Cliente</label>
+            <input 
+              type="text" 
+              id="client-name" 
+              class="form-input" 
+              placeholder="Ej: Acme Corp, Studio Creativo..."
+              required
+              autocomplete="off"
+            >
+          </div>
+
+          <!-- Target URL -->
+          <div class="form-group">
+            <label class="form-label" for="target-url">URL del Sitio Web</label>
+            <input 
+              type="url" 
+              id="target-url" 
+              class="form-input" 
+              placeholder="https://ejemplo.com"
+              required
+            >
+            <span class="form-hint">La URL del sitio en desarrollo que el cliente revisará.</span>
+          </div>
+
+          <!-- Checklist Items -->
+          <div class="form-group">
+            <label class="form-label">Checklist de Entregables</label>
+            <div class="checklist-builder" id="checklist-builder">
+              <div class="checklist-item-row" data-index="0">
+                <span class="checklist-item-number">1</span>
+                <input type="text" class="form-input checklist-input" placeholder="Ej: Logo en alta resolución" required>
+                <button type="button" class="btn-icon btn-remove-item" title="Eliminar" style="display:none;">✕</button>
+              </div>
+            </div>
+            <button type="button" class="add-item-btn" id="add-item-btn">
+              <span>＋</span> Agregar entregable
+            </button>
+          </div>
+
+          <!-- Submit -->
+          <button type="submit" class="btn btn-primary btn-lg" style="width:100;" id="submit-btn">
+            <span id="submit-text">🚀 Crear Proyecto</span>
+            <div id="submit-spinner" class="spinner" style="display:none;"></div>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Scripts: Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="new-project.js"></script>
+</body>
+</html>

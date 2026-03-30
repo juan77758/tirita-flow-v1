@@ -1,0 +1,20 @@
+UNQA-SWARM PROPRIETARY COMMERCIAL LICENSE
+Copyright (c) 2026 UNQA (@unqas)
+
+1. GRANT OF LICENSE
+Subject to the purchase of a valid license via official UNQA channels (unqa.dev, Gumroad, Buy Me a Coffee, etc.), the Licensor grants you a non-exclusive, non-transferable license to use the UNQA-Swarm skill and associated prompts for personal or internal business purposes.
+
+2. RESTRICTIONS
+- You MAY modify the prompts and code for your own internal use.
+- You MAY NOT redistribute, sublicense, rent, lease, or sell the source code, prompts, or documentation to any third party.
+- You MAY NOT include these files in public repositories or open-source projects.
+- You MAY NOT share access to the private GitHub repository with non-licensed users.
+
+3. COMMERCIAL USE
+You are permitted to use this skill to generate code or outcomes for commercial client projects. This license restricts the redistribution of the orchestration logic itself, not the work product created by the AI.
+
+4. TERMINATION
+This license is effective until terminated. Failure to comply with any restriction will result in automatic termination of your license and removal from the repository.
+
+5. WARRANTY
+THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.

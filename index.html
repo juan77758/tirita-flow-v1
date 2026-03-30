@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Tirita Flow - Centro de Comando para agencias de marketing. Centraliza archivos y feedback visual de tus clientes.">
+  <title>Tirita Flow — Centro de Comando</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🩹</text></svg>">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Navbar -->
+    <nav class="navbar" id="navbar">
+      <div class="navbar-brand">
+        <div class="navbar-logo">🩹</div>
+        <div class="navbar-title"><span>Tirita</span> Flow</div>
+      </div>
+      <div class="navbar-links">
+        <!-- Auth Button (dynamic) -->
+        <div id="auth-section" style="display:flex;align-items:center;gap:12px;">
+          <span id="user-email" style="font-size:12px;color:var(--text-muted);display:none;"></span>
+          <button id="btn-login" class="btn btn-ghost" style="display:none;">🔐 Iniciar Sesión</button>
+          <button id="btn-logout" class="btn btn-ghost" style="display:none;font-size:12px;">Cerrar Sesión</button>
+        </div>
+        <a href="new-project.html" class="btn btn-primary" id="btn-new-project" style="display:none;">
+          <span>＋</span> Nuevo Proyecto
+        </a>
+      </div>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="page-header">
+      <h1>Centro de <span class="accent">Comando</span></h1>
+      <p>Gestiona todos tus proyectos, monitorea el progreso y comparte enlaces mágicos con tus clientes.</p>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="stats-row" id="stats-row">
+      <div class="stat-card red">
+        <span class="stat-value" id="stat-total">—</span>
+        <span class="stat-label">Proyectos</span>
+      </div>
+      <div class="stat-card amber">
+        <span class="stat-value" id="stat-pending">—</span>
+        <span class="stat-label">Pendientes</span>
+      </div>
+      <div class="stat-card green">
+        <span class="stat-value" id="stat-completed">—</span>
+        <span class="stat-label">Completados</span>
+      </div>
+    </div>
+
+    <!-- Section Header -->
+    <div class="section-header">
+      <h2>Proyectos Activos</h2>
+    </div>
+
+    <!-- Projects Grid -->
+    <div class="projects-grid" id="projects-grid">
+      <!-- Dynamic content -->
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Delete Confirm Modal -->
+  <div id="confirm-modal" style="display:none;"></div>
+
+  <!-- Scripts: Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="dashboard.js"></script>
+</body>
+</html>

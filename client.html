@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Tirita Flow - Vista de cliente para feedback visual y entrega de archivos.">
+  <title>Tirita Flow — Portal del Cliente</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🩹</text></svg>">
+  <style>
+    /* Client page overrides */
+    body { overflow: hidden; }
+    body::before { display: none; }
+  </style>
+</head>
+<body>
+  <!-- Client Layout -->
+  <div class="client-layout" id="client-layout">
+    
+    <!-- Sidebar / Checklist Drawer -->
+    <aside class="client-sidebar" id="client-sidebar">
+      <div class="sidebar-header">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="navbar-logo" style="width:28px;height:28px;font-size:14px;">🩹</div>
+          <h2 id="project-name-sidebar">Cargando...</h2>
+        </div>
+        <button class="btn-icon" id="close-sidebar" title="Cerrar panel">✕</button>
+      </div>
+      
+      <!-- Progress -->
+      <div style="padding:16px;border-bottom:1px solid var(--border-subtle);">
+        <div class="progress-section">
+          <div class="progress-header">
+            <span class="progress-label">Progreso de entregas</span>
+            <span class="progress-value" id="sidebar-progress-text">0%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="sidebar-progress-bar" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Checklist Content -->
+      <div class="sidebar-content" id="checklist-content">
+        <div style="display:flex;align-items:center;justify-content:center;height:200px;">
+          <div class="spinner"></div>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <p style="font-size:11px;color:var(--text-muted);text-align:center;">
+          Powered by <strong style="color:var(--accent-red);">Tirita Flow</strong>
+        </p>
+      </div>
+    </aside>
+
+    <!-- Main Content: Iframe + Overlay -->
+    <div class="iframe-area" id="iframe-area">
+      <!-- Website iframe -->
+      <iframe id="target-iframe" src="about:blank" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+      
+      <!-- Transparent overlay for feedback clicks -->
+      <div class="click-overlay" id="click-overlay"></div>
+      
+      <!-- Feedback pins rendered here -->
+      <div id="pins-container"></div>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="client-toolbar" id="client-toolbar">
+    <button class="toolbar-btn" id="toggle-sidebar-btn" title="Entregables">
+      📋 Entregables
+    </button>
+    <button class="toolbar-btn" id="toggle-feedback-btn" title="Modo Feedback">
+      📌 Feedback
+    </button>
+  </div>
+
+  <!-- Feedback Modal (hidden by default) -->
+  <div id="feedback-modal-container" style="display:none;"></div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="loading-card">
+      <div class="spinner"></div>
+      <p style="color:var(--text-secondary);font-size:14px;">Cargando proyecto...</p>
+    </div>
+  </div>
+
+  <!-- Error State (hidden by default) -->
+  <div id="error-state" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--bg-primary);display:none;">
+    <div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px;">
+      <div style="font-size:64px;">😵</div>
+      <h2 style="color:var(--text-primary);">Proyecto no encontrado</h2>
+      <p style="color:var(--text-secondary);max-width:400px;text-align:center;">
+        El enlace que usaste parece inválido o el proyecto ya no existe. Contacta a tu agencia para obtener un enlace actualizado.
+      </p>
+    </div>
+  </div>
+
+  <!-- Scripts: Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="client.js"></script>
+</body>
+</html>

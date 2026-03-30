@@ -1,0 +1,31 @@
+{
+  "task_id": "01_example_task",
+  "description": "{{Specific description of what the Worker must build in this task.}}",
+  "dependencies": ["00_setup"],
+  "assigned_skills": ["{{skill_name}}"],
+  "target_file": "{{path/to/target_file.ext}}",
+  "current_status": "pending",
+  "workers_assigned": [],
+  "context_files_to_read": [
+    "{{path/to/existing_file_1}}",
+    "{{path/to/existing_file_2}}"
+  ],
+  "anti_goals": [
+    "Do NOT {{specific prohibition 1}}",
+    "Do NOT {{specific prohibition 2}}"
+  ],
+  "api_contract": {
+    "{{METHOD /endpoint/path}}": {
+      "request": { "{{field}}": "{{type}}" },
+      "response": { "{{field}}": "{{type}}" }
+    }
+  },
+  "status_history": [
+    {
+      "status": "pending",
+      "timestamp": "{{iso_timestamp}}",
+      "changed_by": "{{agent_name}}",
+      "notes": "Mapped from masterplan."
+    }
+  ]
+}

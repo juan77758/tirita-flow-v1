@@ -1,0 +1,8 @@
+{
+  "version": "0.0.1",
+  "ide": "antigravity",
+  "batch_limit": 3,
+  "verbosity": "normal",
+  "auto_compress_description": true,
+  "compress_threshold_lines": 30
+}
