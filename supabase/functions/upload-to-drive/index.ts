@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { JWT } from "npm:google-auth-library@9";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 
 const corsHeaders = {
@@ -14,49 +13,76 @@ serve(async (req) => {
 
   try {
     // 1. Obtener y validar variables de entorno
-    const googleCredentials = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_JSON');
+    const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
+    const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    if (!googleCredentials || !supabaseUrl || !supabaseKey) {
-      throw new Error('Faltan variables de entorno esenciales.');
+    if (!googleClientId || !googleClientSecret || !supabaseUrl || !supabaseKey) {
+      throw new Error('Faltan variables de entorno esenciales (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET).');
     }
 
-    // 2. Parsear FormData (El archivo, la carpeta destino Puesta por la Agencia, y meta)
+    // 2. Parsear FormData
     const formData = await req.formData();
     const file = formData.get('file') as File;
     const folderId = formData.get('folderId') as string;
     const projectId = formData.get('projectId') as string;
     const itemId = formData.get('itemId') as string;
 
-    if (!file || !folderId || !itemId) {
-      return new Response(JSON.stringify({ error: 'Faltan parámetros de archivo o carpeta.' }), {
+    if (!file || !folderId || !itemId || !projectId) {
+      return new Response(JSON.stringify({ error: 'Faltan parámetros (file, folderId, itemId, projectId).' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    console.log(`📥 Recibiendo archivo ${file.name} (Tirita Flow)`);
+    console.log(`📥 Recibiendo archivo ${file.name} para proyecto ${projectId}`);
 
-    // 3. Autenticación con Google API vía Service Account
-    const keys = JSON.parse(googleCredentials);
-    const client = new JWT({
-      email: keys.client_email,
-      key: keys.private_key,
-      scopes: ['https://www.googleapis.com/auth/drive.file'],
-    });
+    // 3. Obtener el refresh token del proyecto (almacenado por la agencia al crear el proyecto)
+    const supabaseClient = createClient(supabaseUrl, supabaseKey);
+    
+    const { data: project, error: projError } = await supabaseClient
+      .from('projects')
+      .select('target_url')
+      .eq('id', projectId)
+      .single();
 
-    // Obtener access token para usar con fetch nativo
-    const tokenResponse = await client.authorize();
-    const accessToken = tokenResponse.access_token;
-    if (!accessToken) {
-      throw new Error('No se pudo obtener access token de Google.');
+    if (projError || !project) {
+      throw new Error('Proyecto no encontrado.');
     }
 
-    // 4. Transformar el archivo para subir a Drive
+    const projectConfig = JSON.parse(project.target_url);
+    const refreshToken = projectConfig.google_refresh_token;
+
+    if (!refreshToken) {
+      throw new Error('No hay refresh token de Google para este proyecto. La agencia debe re-crear el proyecto después de iniciar sesión.');
+    }
+
+    // 4. Usar el refresh token para obtener un access token fresco (como el usuario de la agencia)
+    console.log("🔑 Obteniendo access token con refresh token...");
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: googleClientId,
+        client_secret: googleClientSecret,
+        refresh_token: refreshToken,
+        grant_type: 'refresh_token',
+      }),
+    });
+
+    if (!tokenRes.ok) {
+      const tokenErr = await tokenRes.text();
+      console.error("Token refresh error:", tokenErr);
+      throw new Error(`No se pudo renovar el token de Google: ${tokenErr}`);
+    }
+
+    const tokenData = await tokenRes.json();
+    const accessToken = tokenData.access_token;
+
+    // 5. Subir archivo a Google Drive como el usuario de la agencia
     const fileContent = await file.arrayBuffer();
     
-    // Configuración metadata Google Drive Multipart
     const boundary = '-------314159265358979323846';
     const delimiter = `\r\n--${boundary}\r\n`;
     const closeDelimiter = `\r\n--${boundary}--`;
@@ -74,20 +100,17 @@ serve(async (req) => {
       delimiter +
       'Content-Type: ' + metadata.mimeType + '\r\n\r\n';
 
-    const reqBodyTextEncoder = new TextEncoder();
-    const prefixBytes = reqBodyTextEncoder.encode(multipartRequestBody);
-    const suffixBytes = reqBodyTextEncoder.encode(closeDelimiter);
+    const encoder = new TextEncoder();
+    const prefixBytes = encoder.encode(multipartRequestBody);
+    const suffixBytes = encoder.encode(closeDelimiter);
     
-    // Merge de arreglos de bytes para la request multipart
     const totalLength = prefixBytes.length + fileContent.byteLength + suffixBytes.length;
     const bodyBuffer = new Uint8Array(totalLength);
     bodyBuffer.set(prefixBytes, 0);
     bodyBuffer.set(new Uint8Array(fileContent), prefixBytes.length);
     bodyBuffer.set(suffixBytes, prefixBytes.length + fileContent.byteLength);
 
-    console.log("🚀 Subiendo archivo a Google Drive...");
-    // Usar fetch nativo en vez de client.request() porque gaxios
-    // serializa Uint8Array a JSON, corrompiendo el cuerpo multipart.
+    console.log("🚀 Subiendo archivo a Google Drive como usuario de la agencia...");
     const driveRes = await fetch(
       'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink',
       {
@@ -95,7 +118,6 @@ serve(async (req) => {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
           'Content-Type': `multipart/related; boundary=${boundary}`,
-          'Content-Length': String(bodyBuffer.length),
         },
         body: bodyBuffer,
       }
@@ -104,14 +126,13 @@ serve(async (req) => {
     if (!driveRes.ok) {
       const errText = await driveRes.text();
       console.error("Google Drive API Error:", driveRes.status, errText);
-      throw new Error(`Google Drive API error ${driveRes.status}: ${errText}`);
+      throw new Error(`Google Drive error ${driveRes.status}: ${errText}`);
     }
 
     const fileData = await driveRes.json();
-    console.log("✅ Google Drive Response:", fileData.id);
+    console.log("✅ Archivo subido a Drive:", fileData.id);
 
-    // 5. Actualizar la base de datos de Supabase
-    const supabaseClient = createClient(supabaseUrl, supabaseKey);
+    // 6. Actualizar la base de datos
     const fileUrl = fileData.webViewLink;
 
     const { error: dbError } = await supabaseClient
@@ -121,7 +142,7 @@ serve(async (req) => {
 
     if (dbError) {
       console.error("DB Update Error", dbError);
-      throw new Error("No se pudo actualizar el estado de la base de datos.");
+      throw new Error("No se pudo actualizar el estado en la base de datos.");
     }
 
     return new Response(JSON.stringify({ 

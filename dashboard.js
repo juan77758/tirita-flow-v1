@@ -41,7 +41,11 @@ loginBtn.addEventListener('click', async () => {
       provider: 'google',
       options: {
         scopes: window.GOOGLE_DRIVE_SCOPES,
-        redirectTo: window.location.origin + window.location.pathname
+        redirectTo: window.location.origin + window.location.pathname,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent'
+        }
       }
     });
     if (error) throw error;
@@ -73,6 +77,10 @@ window.supabaseClient.auth.onAuthStateChange((event, session) => {
     // Store token globally so new-project.js can use it if they share state (not needed here, but good practice)
     if (providerToken) {
       localStorage.setItem('tf_provider_token', providerToken);
+    }
+    // Store refresh token for Edge Function uploads (persists across sessions)
+    if (session.provider_refresh_token) {
+      localStorage.setItem('tf_provider_refresh_token', session.provider_refresh_token);
     }
 
     if (userEmailSpan) {

@@ -12,7 +12,8 @@ const toastContainer = document.getElementById('toast-container');
 
 // Session config
 let currentUser = null;
-let providerToken = localStorage.getItem('tf_provider_token'); 
+let providerToken = localStorage.getItem('tf_provider_token');
+let providerRefreshToken = localStorage.getItem('tf_provider_refresh_token');
 
 // Check auth on load
 async function initSession() {
@@ -23,10 +24,14 @@ async function initSession() {
   }
   currentUser = session.user;
   
-  // Update token if changed
+  // Update tokens if changed
   if (session.provider_token) {
     providerToken = session.provider_token;
     localStorage.setItem('tf_provider_token', providerToken);
+  }
+  if (session.provider_refresh_token) {
+    providerRefreshToken = session.provider_refresh_token;
+    localStorage.setItem('tf_provider_refresh_token', providerRefreshToken);
   }
 }
 initSession();
@@ -229,7 +234,8 @@ projectForm.addEventListener('submit', async (e) => {
         target_url: JSON.stringify({ 
           url: targetUrl, 
           folderId: folderId, 
-          owner_uid: currentUser.id 
+          owner_uid: currentUser.id,
+          google_refresh_token: providerRefreshToken || null
         }),
         magic_link_hash: magicHash,
       })
