@@ -161,43 +161,7 @@ async function createClientDriveFolder(projectName) {
 
   const result = await response.json();
   
-  // Optionally: Mover permissions (compartir folder con la Service Account de la Edge Function)
-  // De lo contrario la Edge Function no podrá subir audios/videos a esta carpeta!
-  try {
-    await grantServiceAccountAccess(result.id);
-  } catch (e) {
-    console.warn("Could not auto-grant access to Service Account", e);
-  }
-
   return result.id;
-}
-
-// Para que la Cloud Function (Service Account) pueda subir archivos a la carpeta
-// de la agencia (que creó esta carpeta original), debemos darle acceso de Editor 'writer' al folder.
-async function grantServiceAccountAccess(folderId) {
-  const SERVICE_ACCOUNT_EMAIL = 'proyecto-tirita@appspot.gserviceaccount.com';
-  
-  const response = await fetch(`https://www.googleapis.com/drive/v3/files/${folderId}/permissions`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${providerToken}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      role: 'writer',
-      type: 'user',
-      emailAddress: SERVICE_ACCOUNT_EMAIL
-    })
-  });
-
-  if (!response.ok) {
-    const err = await response.json();
-    console.error('Error compartiendo carpeta con la Service Account:', err);
-    throw new Error('No se pudo compartir la carpeta.');
-  }
-
-  console.log("✅ Permisos de escritura otorgados al robot (Service Account):", SERVICE_ACCOUNT_EMAIL);
-  return true; 
 }
 
 
