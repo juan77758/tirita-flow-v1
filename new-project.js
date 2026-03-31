@@ -91,14 +91,26 @@ function updateItemNumbers() {
   });
 }
 
+const placeholders = [
+  "Ej: Logo en alta resolución (PNG, AI, SVG)",
+  "Ej: Video crudo para Reels (MP4, MOV)",
+  "Ej: Textos de 'Quiénes Somos' (PDF, Word)",
+  "Ej: Identidad visual / Brandbook"
+];
+let phIndex = 0;
+
 addChecklistItemBtn.addEventListener('click', () => {
   itemCount++;
   const itemDiv = document.createElement('div');
   itemDiv.className = 'checklist-item-row';
   itemDiv.dataset.index = checklistContainer.children.length;
+  
+  const currentPlaceholder = placeholders[phIndex % placeholders.length];
+  phIndex++;
+
   itemDiv.innerHTML = `
     <span class="checklist-item-number">${itemCount}</span>
-    <input type="text" class="form-input checklist-input" placeholder="Ej: Logo en alta resolución" required>
+    <input type="text" class="form-input checklist-input" placeholder="${currentPlaceholder}" required>
     <button type="button" class="btn-icon btn-remove-item" title="Eliminar">✕</button>
   `;
   checklistContainer.appendChild(itemDiv);
