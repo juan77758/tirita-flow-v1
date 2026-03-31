@@ -132,9 +132,31 @@ if (firstRemoveBtn) {
 updateItemNumbers();
 
 // ── Create Folder in Google Drive (BYOD) ──
+async function getValidDriveToken() {
+  // 1. Try refreshing the Supabase session to get a fresh provider token
+  const { data: { session }, error } = await window.supabaseClient.auth.refreshSession();
+  if (!error && session?.provider_token) {
+    providerToken = session.provider_token;
+    localStorage.setItem('tf_provider_token', providerToken);
+    if (session.provider_refresh_token) {
+      providerRefreshToken = session.provider_refresh_token;
+      localStorage.setItem('tf_provider_refresh_token', providerRefreshToken);
+    }
+    return providerToken;
+  }
+
+  // 2. Fall back to stored token (might still be valid)
+  if (providerToken) return providerToken;
+
+  // 3. No token at all
+  return null;
+}
+
 async function createClientDriveFolder(projectName) {
-  if (!providerToken) {
-    throw new Error('No Google Drive OAuth token found. Por favor re-inicia sesión.');
+  let token = await getValidDriveToken();
+
+  if (!token) {
+    throw new Error('Tu sesión de Google Drive expiró. Por favor cierra sesión y vuelve a iniciar para reconectar Drive.');
   }
 
   const folderName = `TiritaFlow Client: ${projectName} - ${new Date().toISOString().split('T')[0]}`;
@@ -144,14 +166,34 @@ async function createClientDriveFolder(projectName) {
     mimeType: 'application/vnd.google-apps.folder'
   };
 
-  const response = await fetch('https://www.googleapis.com/drive/v3/files', {
+  let response = await fetch('https://www.googleapis.com/drive/v3/files', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${providerToken}`,
+      'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(metadata)
   });
+
+  // If 401, the token expired — try re-auth
+  if (response.status === 401) {
+    console.warn('Drive token expired, forcing re-authentication...');
+    // Force a fresh Google sign-in to get new Drive scopes
+    const { error: oauthErr } = await window.supabaseClient.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        scopes: window.GOOGLE_DRIVE_SCOPES,
+        redirectTo: window.location.href, // come back to this page
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent'
+        }
+      }
+    });
+    if (oauthErr) throw new Error('No se pudo reconectar Google Drive. Cierra sesión y vuelve a entrar.');
+    // The page will redirect, so we won't reach here
+    return;
+  }
 
   if (!response.ok) {
     const err = await response.json();
