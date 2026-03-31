@@ -93,9 +93,18 @@ async function loadProject() {
       .eq('project_id', projectId)
       .order('created_at', { ascending: true });
 
-    if (nError) throw nError;
+    if (nError) {
+      console.error('❌ Error fetching feedback notes:', nError);
+      throw nError;
+    }
     feedbackNotes = notes || [];
     console.log(`📋 Feedback notes fetched: ${feedbackNotes.length}`, feedbackNotes);
+
+    // DEBUG: Also try fetching ALL notes without filter
+    const { data: allNotes, error: allErr } = await window.supabaseClient
+      .from('feedback_notes')
+      .select('*');
+    console.log(`🔍 DEBUG - ALL notes in table (no filter): ${allNotes ? allNotes.length : 'ERROR'}`, allNotes || allErr);
 
     // Render UI
     projectNameSidebar.textContent = projectData.name;
