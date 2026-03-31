@@ -62,15 +62,17 @@
     </aside>
 
     <!-- Main Content: Iframe + Overlay -->
-    <div class="iframe-area" id="iframe-area">
-      <!-- Website iframe -->
-      <iframe id="target-iframe" src="about:blank" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
-      
-      <!-- Transparent overlay for feedback clicks -->
-      <div class="click-overlay" id="click-overlay"></div>
-      
-      <!-- Feedback pins rendered here -->
-      <div id="pins-container"></div>
+    <div class="iframe-area" id="iframe-area" style="overflow-y: auto; overflow-x: hidden;">
+      <div class="iframe-scroll-content" id="iframe-scroll-content" style="position: relative; width: 100%; height: 8000px;">
+        <!-- Website iframe -->
+        <iframe id="target-iframe" src="about:blank" scrolling="no" style="position: absolute; top:0; left:0; width:100%; height:100%; z-index:1;" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+        
+        <!-- Transparent overlay for feedback clicks -->
+        <div class="click-overlay" id="click-overlay" style="height:100%;"></div>
+        
+        <!-- Feedback pins rendered here -->
+        <div id="pins-container" style="height:100%;"></div>
+      </div>
     </div>
   </div>
 
