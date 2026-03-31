@@ -93,18 +93,8 @@ async function loadProject() {
       .eq('project_id', projectId)
       .order('created_at', { ascending: true });
 
-    if (nError) {
-      console.error('❌ Error fetching feedback notes:', nError);
-      throw nError;
-    }
+    if (nError) throw nError;
     feedbackNotes = notes || [];
-    console.log(`📋 Feedback notes fetched: ${feedbackNotes.length}`, feedbackNotes);
-
-    // DEBUG: Also try fetching ALL notes without filter
-    const { data: allNotes, error: allErr } = await window.supabaseClient
-      .from('feedback_notes')
-      .select('*');
-    console.log(`🔍 DEBUG - ALL notes in table (no filter): ${allNotes ? allNotes.length : 'ERROR'}`, allNotes || allErr);
 
     // Render UI
     projectNameSidebar.textContent = projectData.name;
@@ -344,31 +334,20 @@ async function submitFeedback(x, y) {
 
 // ── Render Pins ──
 function renderPins() {
-  console.log(`🔵 renderPins() called — Total notes: ${feedbackNotes.length}`);
-  
-  if (!pinsContainer) {
-    console.error('❌ #pins-container not found in DOM!');
-    return;
-  }
+  if (!pinsContainer) return;
 
   if (feedbackNotes.length === 0) {
-    console.log('⚪ No feedback notes to render.');
     pinsContainer.innerHTML = '';
     return;
   }
 
-  pinsContainer.innerHTML = feedbackNotes.map((note, i) => {
-    console.log(`  📌 Pin ${i + 1}: x=${note.x_coordinate}%, y=${note.y_coordinate}%, status=${note.status}, text="${note.comment_text}"`);
-    return `
-      <div class="feedback-pin ${note.status === 'resolved' ? 'resolved' : 'open'}" 
-        style="left:${note.x_coordinate}%;top:${note.y_coordinate}%;"
-        data-index="${i}">
-        <div class="pin-number">${i + 1}</div>
-      </div>
-    `;
-  }).join('');
-
-  console.log(`✅ renderPins() complete — ${pinsContainer.children.length} pins injected into DOM`);
+  pinsContainer.innerHTML = feedbackNotes.map((note, i) => `
+    <div class="feedback-pin ${note.status === 'resolved' ? 'resolved' : 'open'}" 
+      style="left:${note.x_coordinate}%;top:${note.y_coordinate}%;"
+      data-index="${i}">
+      <div class="pin-number">${i + 1}</div>
+    </div>
+  `).join('');
 }
 
 pinsContainer.addEventListener('click', (e) => {
