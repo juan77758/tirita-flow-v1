@@ -190,6 +190,25 @@ function renderProjectCard(project) {
 
   const clientUrl = `${window.location.origin}/client.html?id=${project.magic_link_hash}`;
 
+  // ── Progress calculation ──
+  const items = project.checklist_items || [];
+  const totalFiles = items.length;
+  const deliveredFiles = items.filter(i => i.status === 'completed' && i.file_url).length;
+  const progressPercent = totalFiles > 0 ? Math.round((deliveredFiles / totalFiles) * 100) : 0;
+  const isComplete = progressPercent === 100;
+
+  const progressBarHtml = totalFiles > 0 ? `
+    <div class="card-progress-section">
+      <div class="card-progress-header">
+        <span class="card-progress-counter">${deliveredFiles}/${totalFiles} Archivos Completados</span>
+        <span class="card-progress-percent ${isComplete ? 'complete' : ''}">${progressPercent}%</span>
+      </div>
+      <div class="card-progress-track">
+        <div class="card-progress-fill ${isComplete ? 'complete' : ''}" style="width:${progressPercent}%"></div>
+      </div>
+    </div>
+  ` : '';
+
   let checklistHtml = '<div class="project-checklist" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">';
   if (project.checklist_items && project.checklist_items.length > 0) {
     // Sort items: pending first, completed last
@@ -236,6 +255,7 @@ function renderProjectCard(project) {
     <div class="project-meta">
       Creado: ${new Date(project.created_at).toLocaleDateString()}
     </div>
+    ${progressBarHtml}
     <div class="project-actions" style="margin-bottom: 15px;">
       <button class="btn btn-secondary btn-sm" onclick="copyMagicLink('${clientUrl}')">
         🔗 Copiar Enlace Cliente

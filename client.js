@@ -98,6 +98,15 @@ async function loadProject() {
 
     // Render UI
     projectNameSidebar.textContent = projectData.name;
+    
+    // Welcome greeting
+    const greetingEl = document.getElementById('sidebar-greeting');
+    const greetingTextEl = document.getElementById('greeting-text');
+    if (greetingEl && greetingTextEl) {
+      greetingTextEl.textContent = `Hola, ${projectData.name}`;
+      greetingEl.style.display = '';
+    }
+
     targetIframe.src = projectData.target_url;
     renderChecklist();
     renderPins();
