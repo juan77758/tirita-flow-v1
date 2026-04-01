@@ -261,12 +261,14 @@ function toggleFeedbackMode() {
   if (feedbackMode) {
     clickOverlay.style.pointerEvents = 'auto';
     clickOverlay.style.cursor = 'crosshair';
+    if (scrollCaptureLayer) scrollCaptureLayer.style.pointerEvents = 'none';
     btn.classList.add('active');
     btn.innerHTML = '📌 Feedback <span style="font-size:10px;opacity:0.7">(activo)</span>';
     showToast('Modo feedback activado. Haz clic sobre la web para dejar un comentario.', 'info');
   } else {
     clickOverlay.style.pointerEvents = 'none';
     clickOverlay.style.cursor = 'default';
+    if (scrollCaptureLayer) scrollCaptureLayer.style.pointerEvents = 'auto';
     btn.classList.remove('active');
     btn.innerHTML = '📌 Feedback';
   }
@@ -367,23 +369,47 @@ function renderPins() {
 }
 
 // ── Scroll-Anchored Pins ──
-// Wheel events on the <iframe> element bubble to iframe-area in the parent DOM.
-// We track cumulative deltaY as a virtual scroll offset and translate the
-// pins container so pins stay anchored to the page content.
+// Cross-origin iframe wheel events do NOT bubble to the parent DOM.
+// Solution: a transparent scroll-capture layer sits on top of the iframe.
+// It intercepts wheel events, tracks the scroll offset, transforms the
+// pins container, then briefly disables itself so the NEXT browser wheel
+// tick reaches the iframe and scrolls it normally.
+let scrollCaptureLayer = null;
+
 function initScrollTracking() {
   const iframeArea = document.getElementById('iframe-area');
 
-  iframeArea.addEventListener('wheel', (e) => {
-    // In feedback mode the overlay absorbs wheel events and the iframe
-    // doesn't actually scroll, so skip tracking to avoid desync.
-    if (feedbackMode) return;
+  // Create the capture layer (sits between iframe z:1 and overlay z:10)
+  scrollCaptureLayer = document.createElement('div');
+  scrollCaptureLayer.id = 'scroll-capture-layer';
+  scrollCaptureLayer.style.cssText =
+    'position:absolute;top:0;left:0;width:100%;height:100%;' +
+    'z-index:5;pointer-events:auto;cursor:default;';
+  iframeArea.appendChild(scrollCaptureLayer);
 
+  let toggling = false;
+
+  scrollCaptureLayer.addEventListener('wheel', (e) => {
+    // Normalize delta to pixels
     let delta = e.deltaY;
-    if (e.deltaMode === 1) delta *= 20;   // LINE mode → px
-    if (e.deltaMode === 2) delta *= iframeArea.getBoundingClientRect().height; // PAGE
+    if (e.deltaMode === 1) delta *= 20;   // LINE → px
+    if (e.deltaMode === 2) delta *= iframeArea.getBoundingClientRect().height;
 
     virtualScrollTop = Math.max(0, virtualScrollTop + delta);
     syncPinsTransform();
+
+    // Briefly disable capture layer so the iframe receives the scroll
+    if (!toggling) {
+      toggling = true;
+      scrollCaptureLayer.style.pointerEvents = 'none';
+      setTimeout(() => {
+        // Only re-enable if NOT in feedback mode (overlay handles events then)
+        if (!feedbackMode) {
+          scrollCaptureLayer.style.pointerEvents = 'auto';
+        }
+        toggling = false;
+      }, 32); // ~2 frames at 60fps
+    }
   }, { passive: true });
 }
 
