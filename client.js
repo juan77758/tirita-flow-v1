@@ -261,16 +261,12 @@ function toggleFeedbackMode() {
   if (feedbackMode) {
     clickOverlay.style.pointerEvents = 'auto';
     clickOverlay.style.cursor = 'crosshair';
-    // Disable capture layer — overlay handles wheel tracking in feedback mode
-    if (scrollCaptureLayer) scrollCaptureLayer.style.pointerEvents = 'none';
     btn.classList.add('active');
     btn.innerHTML = '📌 Feedback <span style="font-size:10px;opacity:0.7">(activo)</span>';
     showToast('Modo feedback activado. Haz clic sobre la web para dejar un comentario.', 'info');
   } else {
     clickOverlay.style.pointerEvents = 'none';
     clickOverlay.style.cursor = 'default';
-    // Re-enable capture layer for scroll tracking
-    if (scrollCaptureLayer) scrollCaptureLayer.style.pointerEvents = 'auto';
     btn.classList.remove('active');
     btn.innerHTML = '📌 Feedback';
   }
@@ -370,52 +366,24 @@ function renderPins() {
   syncPinsTransform();
 }
 
-// ── Scroll-Anchored Pins ──
-// Cross-origin iframe wheel events do NOT bubble to the parent DOM.
-// We use a capture layer that alternates ON/OFF every wheel event:
-//   ON  → capture event, track delta*2, then disable
-//   OFF → next wheel goes to iframe (scrolls it), then re-enable
-// The 2x multiplier compensates for only seeing every-other event.
-let scrollCaptureLayer = null;
-
+// ── Scroll-Anchored Pins (Native via postMessage) ──
+// For cross-origin iframes, native wheel interception locks the browser's scroll target.
+// The robust solution is for the child site to report its scroll position via postMessage.
+// Users must inject the provided script snippet into their client sites.
 function initScrollTracking() {
-  const iframeArea = document.getElementById('iframe-area');
+  window.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'TIRITA_SCROLL') {
+      virtualScrollTop = e.data.scrollTop || 0;
+      syncPinsTransform();
+    }
+  });
 
-  // Create capture layer (z between iframe:1 and overlay:10)
-  scrollCaptureLayer = document.createElement('div');
-  scrollCaptureLayer.id = 'scroll-capture-layer';
-  scrollCaptureLayer.style.cssText =
-    'position:absolute;top:0;left:0;width:100%;height:100%;' +
-    'z-index:5;pointer-events:auto;';
-  iframeArea.appendChild(scrollCaptureLayer);
-
-  scrollCaptureLayer.addEventListener('wheel', (e) => {
-    let delta = e.deltaY;
-    if (e.deltaMode === 1) delta *= 20;
-    if (e.deltaMode === 2) delta *= iframeArea.getBoundingClientRect().height;
-
-    // 2x because we only see ~half the wheel events
-    virtualScrollTop = Math.max(0, virtualScrollTop + delta * 2);
-    syncPinsTransform();
-
-    // Disable IMMEDIATELY so next wheel tick goes to iframe
-    scrollCaptureLayer.style.pointerEvents = 'none';
-
-    // Re-enable after 2 animation frames (lets ≥1 tick pass to iframe)
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (!feedbackMode) {
-          scrollCaptureLayer.style.pointerEvents = 'auto';
-        }
-      });
-    });
-  }, { passive: true });
-
-  // Feedback mode: overlay absorbs events — track wheel there too
+  // Track wheel on the overlay strictly during feedbackMode 
+  // (so the pins move if they somehow scroll while placing pins)
   clickOverlay.addEventListener('wheel', (e) => {
     let delta = e.deltaY;
     if (e.deltaMode === 1) delta *= 20;
-    if (e.deltaMode === 2) delta *= iframeArea.getBoundingClientRect().height;
+    if (e.deltaMode === 2) delta *= document.getElementById('iframe-area').getBoundingClientRect().height;
 
     virtualScrollTop = Math.max(0, virtualScrollTop + delta);
     syncPinsTransform();
