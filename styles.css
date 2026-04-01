@@ -1115,33 +1115,31 @@ a:hover {
   flex: 1;
   position: relative;
   background: var(--bg-primary);
+  overflow: hidden;    /* Prevent any overflow from breaking layout */
+  min-width: 0;        /* Respect flex shrinking */
 }
 
 .iframe-area iframe {
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
   width: 100%;
   height: 100%;
   border: none;
   z-index: 1;
+  /* The iframe acts as its own viewport — do NOT add scrolling="no" or 
+     force an artificial height in the HTML. The child site scrolls inside 
+     this natural viewport just like a browser tab. */
 }
 
 .click-overlay {
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
-  cursor: crosshair;
+  width: 100%;
+  height: 100%;
   z-index: 10;
   pointer-events: none; /* Disabled by default, toggled via JS */
-}
-
-.click-overlay.disabled {
-  pointer-events: none;
 }
 
 /* Feedback Pins */
@@ -1149,8 +1147,6 @@ a:hover {
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
   width: 100%;
   height: 100%;
   pointer-events: none;
