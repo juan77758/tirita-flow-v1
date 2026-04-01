@@ -371,26 +371,17 @@ function renderPins() {
 }
 
 // ── Scroll-Anchored Pins ──
-// Cross-origin iframe wheel events do NOT bubble to the parent DOM, and
-// document-level capture listeners also cannot see them.  The ONLY way to
-// detect scrolling over a cross-origin iframe is to put a transparent layer
-// with pointer-events:auto on top of it.
-//
-// Flow:
-//   1. Capture-layer intercepts wheel event  →  track virtualScrollTop
-//   2. Disable capture-layer (pointer-events:none) for a short window
-//   3. During that window, subsequent wheel ticks reach the iframe directly
-//   4. Re-enable capture-layer after the window closes
-//
-// This means we capture ~every-other wheel "burst".  Because continuous
-// scrolling produces many events per second, the resulting virtualScrollTop
-// closely tracks the real scroll.
+// Cross-origin iframe wheel events do NOT bubble to the parent DOM.
+// We use a capture layer that alternates ON/OFF every wheel event:
+//   ON  → capture event, track delta*2, then disable
+//   OFF → next wheel goes to iframe (scrolls it), then re-enable
+// The 2x multiplier compensates for only seeing every-other event.
 let scrollCaptureLayer = null;
 
 function initScrollTracking() {
   const iframeArea = document.getElementById('iframe-area');
 
-  // Create capture layer  (z between iframe:1 and overlay:10)
+  // Create capture layer (z between iframe:1 and overlay:10)
   scrollCaptureLayer = document.createElement('div');
   scrollCaptureLayer.id = 'scroll-capture-layer';
   scrollCaptureLayer.style.cssText =
@@ -398,32 +389,29 @@ function initScrollTracking() {
     'z-index:5;pointer-events:auto;';
   iframeArea.appendChild(scrollCaptureLayer);
 
-  let paused = false;
-
   scrollCaptureLayer.addEventListener('wheel', (e) => {
-    // Normalise delta
     let delta = e.deltaY;
     if (e.deltaMode === 1) delta *= 20;
     if (e.deltaMode === 2) delta *= iframeArea.getBoundingClientRect().height;
 
-    virtualScrollTop = Math.max(0, virtualScrollTop + delta);
+    // 2x because we only see ~half the wheel events
+    virtualScrollTop = Math.max(0, virtualScrollTop + delta * 2);
     syncPinsTransform();
 
-    // Open a pass-through window so the iframe scrolls directly
-    if (!paused) {
-      paused = true;
-      scrollCaptureLayer.style.pointerEvents = 'none';
-      setTimeout(() => {
+    // Disable IMMEDIATELY so next wheel tick goes to iframe
+    scrollCaptureLayer.style.pointerEvents = 'none';
+
+    // Re-enable after 2 animation frames (lets ≥1 tick pass to iframe)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
         if (!feedbackMode) {
           scrollCaptureLayer.style.pointerEvents = 'auto';
         }
-        paused = false;
-      }, 60);   // ~4 frames at 60fps – enough for the browser to deliver
-    }
+      });
+    });
   }, { passive: true });
 
-  // In feedback mode the click-overlay (z:10, pointer-events:auto) absorbs
-  // events.  Track wheel there too so pins still move with scroll.
+  // Feedback mode: overlay absorbs events — track wheel there too
   clickOverlay.addEventListener('wheel', (e) => {
     let delta = e.deltaY;
     if (e.deltaMode === 1) delta *= 20;
@@ -431,8 +419,6 @@ function initScrollTracking() {
 
     virtualScrollTop = Math.max(0, virtualScrollTop + delta);
     syncPinsTransform();
-    // NOTE: the overlay blocks the iframe scroll in feedback mode, which is
-    // the intended UX (user is placing pins, not browsing).
   }, { passive: true });
 }
 
