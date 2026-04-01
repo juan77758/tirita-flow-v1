@@ -377,17 +377,6 @@ function initScrollTracking() {
       syncPinsTransform();
     }
   });
-
-  // Track wheel on the overlay strictly during feedbackMode 
-  // (so the pins move if they somehow scroll while placing pins)
-  clickOverlay.addEventListener('wheel', (e) => {
-    let delta = e.deltaY;
-    if (e.deltaMode === 1) delta *= 20;
-    if (e.deltaMode === 2) delta *= document.getElementById('iframe-area').getBoundingClientRect().height;
-
-    virtualScrollTop = Math.max(0, virtualScrollTop + delta);
-    syncPinsTransform();
-  }, { passive: true });
 }
 
 function syncPinsTransform() {
