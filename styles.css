@@ -1151,6 +1151,8 @@ a:hover {
   height: 100%;
   pointer-events: none;
   z-index: 20;
+  will-change: transform;    /* GPU-accelerated scroll transform */
+  overflow: visible;          /* Pins at y>100% must remain paintable */
 }
 
 .feedback-pin {

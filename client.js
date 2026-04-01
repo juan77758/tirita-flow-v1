@@ -9,6 +9,7 @@ let checklistItems = [];
 let feedbackNotes = [];
 let feedbackMode = false;
 let sidebarOpen = true;
+let virtualScrollTop = 0;
 
 // ── DOM ──
 const toastContainer = document.getElementById('toast-container');
@@ -276,7 +277,10 @@ function handleOverlayClick(e) {
 
   const rect = clickOverlay.getBoundingClientRect();
   const xPercent = ((e.clientX - rect.left) / rect.width * 100).toFixed(2);
-  const yPercent = ((e.clientY - rect.top) / rect.height * 100).toFixed(2);
+  // Anchor pin to document position: viewport click + scroll offset
+  const viewportYPx = e.clientY - rect.top;
+  const absoluteYPx = viewportYPx + virtualScrollTop;
+  const yPercent = (absoluteYPx / rect.height * 100).toFixed(2);
 
   showFeedbackModal(xPercent, yPercent);
 }
@@ -357,6 +361,35 @@ function renderPins() {
       <div class="pin-number">${i + 1}</div>
     </div>
   `).join('');
+
+  // Re-apply current scroll transform
+  syncPinsTransform();
+}
+
+// ── Scroll-Anchored Pins ──
+// Wheel events on the <iframe> element bubble to iframe-area in the parent DOM.
+// We track cumulative deltaY as a virtual scroll offset and translate the
+// pins container so pins stay anchored to the page content.
+function initScrollTracking() {
+  const iframeArea = document.getElementById('iframe-area');
+
+  iframeArea.addEventListener('wheel', (e) => {
+    // In feedback mode the overlay absorbs wheel events and the iframe
+    // doesn't actually scroll, so skip tracking to avoid desync.
+    if (feedbackMode) return;
+
+    let delta = e.deltaY;
+    if (e.deltaMode === 1) delta *= 20;   // LINE mode → px
+    if (e.deltaMode === 2) delta *= iframeArea.getBoundingClientRect().height; // PAGE
+
+    virtualScrollTop = Math.max(0, virtualScrollTop + delta);
+    syncPinsTransform();
+  }, { passive: true });
+}
+
+function syncPinsTransform() {
+  if (!pinsContainer) return;
+  pinsContainer.style.transform = `translateY(-${virtualScrollTop}px)`;
 }
 
 pinsContainer.addEventListener('click', (e) => {
@@ -450,5 +483,6 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('close-sidebar').addEventListener('click', toggleSidebar);
   clickOverlay.addEventListener('click', handleOverlayClick);
 
+  initScrollTracking();
   loadProject();
 });
