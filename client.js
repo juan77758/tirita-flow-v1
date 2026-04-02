@@ -396,16 +396,32 @@ function renderThread() {
   // Sort chronologically
   events.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
-  // --- SIMULATION MODE ---
+  // --- SIMULATION MODE (when no real data exists) ---
   if (events.length === 0) {
     events.push({
-      message_type: 'comment', sender_type: 'client', sender_name: 'Cliente', message_text: 'Hola, adjunto la estructura solicitada para el logo.', created_at: new Date(Date.now() - 3600000).toISOString()
+      message_type: 'comment', sender_type: 'client', sender_name: 'Cliente', 
+      message_text: 'Hola, adjunto la estructura solicitada para el logo.', 
+      created_at: new Date(Date.now() - 3600000).toISOString()
     });
     events.push({
-      message_type: 'comment', sender_type: 'agency', sender_name: 'Agencia', message_text: 'ok, lo revisamos y te damos feedback pronto.', created_at: new Date(Date.now() - 1800000).toISOString()
+      message_type: 'comment', sender_type: 'agency', sender_name: 'Agencia', 
+      message_text: '¡Recibido! Lo revisamos y te damos feedback pronto. 👍', 
+      created_at: new Date(Date.now() - 2700000).toISOString()
     });
     events.push({
-      message_type: 'comment', sender_type: 'client', sender_name: 'Cliente', message_text: 'Perfecto, quedo atento.', created_at: new Date(Date.now() - 900000).toISOString()
+      message_type: 'comment', sender_type: 'client', sender_name: 'Cliente', 
+      message_text: 'Perfecto, quedo atento.', 
+      created_at: new Date(Date.now() - 1800000).toISOString()
+    });
+    events.push({
+      message_type: 'comment', sender_type: 'agency', sender_name: 'Agencia', 
+      message_text: 'Ojo con el color del fondo, necesitamos que sea más oscuro para contraste.', 
+      created_at: new Date(Date.now() - 900000).toISOString()
+    });
+    events.push({
+      message_type: 'comment', sender_type: 'client', sender_name: 'Cliente', 
+      message_text: 'creo que ya, lo ajusté. ¿Puedes revisar?', 
+      created_at: new Date(Date.now() - 300000).toISOString()
     });
   }
   // -------------------------
@@ -418,8 +434,13 @@ function renderThread() {
 
   timeline.innerHTML = events.map(ev => {
     const isSystem = ev.message_type?.startsWith('system') || ev.type === 'system_upload';
-    const isAgency = ev.sender_type === 'agency';
+    // Strict sender_type check — NEVER default to anything without checking
+    const senderType = (ev.sender_type || '').toLowerCase().trim();
+    const isAgency = senderType === 'agency';
+    const isClient = senderType === 'client' || (!isSystem && !isAgency);
     const msgClass = isSystem ? 'msg-system' : (isAgency ? 'msg-agency' : 'msg-client');
+
+    console.log(`[Chat] sender_type="${ev.sender_type}" → class="${msgClass}" | text="${(ev.message_text || '').substring(0, 40)}"`);
 
     const avatarClass = isAgency ? 'avatar-agency'
                       : isSystem ? 'avatar-system'
@@ -427,6 +448,7 @@ function renderThread() {
     const avatarIcon = isAgency ? '🩹'
                      : isSystem ? '⚙️'
                      : '👤';
+    const senderLabel = isAgency ? 'Agencia' : (isSystem ? 'Sistema' : 'Cliente');
     const time = formatTimeAgo(ev.created_at);
     const fileLink = ev.file_url
       ? `<a href="${ev.file_url}" target="_blank" class="thread-msg-file-link">📎 Ver archivo</a>`
@@ -437,7 +459,7 @@ function renderThread() {
       <div class="thread-msg-avatar ${avatarClass}">${avatarIcon}</div>
       <div class="thread-msg-body">
         <div class="thread-msg-header">
-          <span class="thread-msg-sender">${escapeHtml(ev.sender_name || 'Sistema')}</span>
+          <span class="thread-msg-sender">${escapeHtml(senderLabel)}</span>
           <span class="thread-msg-time">${time}</span>
         </div>
         <div class="thread-msg-text">${escapeHtml(ev.message_text)}</div>
