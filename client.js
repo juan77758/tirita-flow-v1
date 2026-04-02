@@ -1103,6 +1103,49 @@ document.addEventListener('DOMContentLoaded', () => {
     switchMobileTab('entregables');
   }
 
+  // ── BUG-2 FIX: Mobile keyboard detection ──
+  // Hide bottom toolbar when textarea is focused (keyboard open)
+  const commentInput = document.getElementById('thread-comment-input');
+  const clientToolbar = document.getElementById('client-toolbar');
+  const detailPanel = document.getElementById('detail-panel');
+
+  if (commentInput && clientToolbar && detailPanel) {
+    commentInput.addEventListener('focus', () => {
+      if (isMobile()) {
+        clientToolbar.classList.add('keyboard-open');
+        detailPanel.classList.add('keyboard-active');
+        // Auto-scroll timeline to bottom so user sees latest messages
+        const timeline = document.getElementById('thread-timeline');
+        if (timeline) {
+          setTimeout(() => timeline.scrollTop = timeline.scrollHeight, 300);
+        }
+      }
+    });
+
+    commentInput.addEventListener('blur', () => {
+      // Small delay to avoid flicker if user taps Send
+      setTimeout(() => {
+        clientToolbar.classList.remove('keyboard-open');
+        detailPanel.classList.remove('keyboard-active');
+      }, 150);
+    });
+  }
+
+  // Backup: VisualViewport API for devices that resize on keyboard
+  if (window.visualViewport && clientToolbar) {
+    window.visualViewport.addEventListener('resize', () => {
+      if (!isMobile()) return;
+      const isKeyboardOpen = window.visualViewport.height < window.innerHeight * 0.75;
+      if (isKeyboardOpen) {
+        clientToolbar.classList.add('keyboard-open');
+        detailPanel?.classList.add('keyboard-active');
+      } else {
+        clientToolbar.classList.remove('keyboard-open');
+        detailPanel?.classList.remove('keyboard-active');
+      }
+    });
+  }
+
   initScrollTracking();
   loadProject();
 });

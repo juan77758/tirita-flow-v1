@@ -1616,6 +1616,14 @@ a:hover {
   pointer-events: none; /* Disabled by default, toggled via JS */
 }
 
+/* ── Mobile: constrain overlay so it NEVER covers the bottom nav bar ── */
+@media (max-width: 768px) {
+  .click-overlay {
+    /* Leave room for the 56px toolbar + safe-area at the bottom */
+    height: calc(100% - 56px - env(safe-area-inset-bottom, 0px));
+  }
+}
+
 /* Feedback Pins */
 #pins-container {
   position: absolute;
@@ -1939,11 +1947,14 @@ a:hover {
   /* Detail panel: full width overlay on mobile */
   .detail-panel {
     position: fixed;
-    inset: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: calc(56px + env(safe-area-inset-bottom, 0px)); /* BUG-2 FIX: Don't cover bottom toolbar */
     width: 100% !important;
     min-width: 0;
     max-width: none;
-    height: 100dvh;
+    height: auto;
     z-index: 150;
     border-right: none;
   }
@@ -1974,7 +1985,7 @@ a:hover {
     left: 0;
     right: auto;
     width: 100%;
-    z-index: 200;
+    z-index: 10000; /* BUG-1 FIX: Above everything — overlay, pins, modals */
     display: flex;
     gap: 0;
     padding: 0;
@@ -1983,6 +1994,14 @@ a:hover {
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     padding-bottom: env(safe-area-inset-bottom, 0px);
+    transition: transform 0.25s ease, opacity 0.25s ease;
+  }
+
+  /* BUG-2 FIX: Hide toolbar when the keyboard is open (textarea focused) */
+  .client-toolbar.keyboard-open {
+    transform: translateY(100%);
+    opacity: 0;
+    pointer-events: none;
   }
 
   .toolbar-btn {
@@ -2030,5 +2049,20 @@ a:hover {
 
   .client-layout {
     padding-bottom: 56px;
+  }
+
+  /* BUG-2 FIX: Safety padding so last messages aren't hidden behind bottom bar */
+  .detail-panel .thread-timeline {
+    padding-bottom: 100px;
+  }
+
+  /* BUG-2 FIX: When keyboard is open, detail panel uses full height */
+  .detail-panel.keyboard-active {
+    bottom: 0; /* Expand since toolbar is hidden */
+    padding-bottom: 0;
+  }
+
+  .detail-panel.keyboard-active .thread-input-area {
+    padding-bottom: calc(var(--space-md) + env(safe-area-inset-bottom, 0px));
   }
 }
