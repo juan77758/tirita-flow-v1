@@ -16,11 +16,10 @@ let activeThreadItemId = null;
 let threadMessages = [];
 let threadFileVersions = [];
 
-// ── User Role Detection (Supabase Auth) ──
-// Compara el email del usuario autenticado contra el email de la Agencia.
+// ── User Role Detection (Supabase Auth + Profiles Table) ──
+// Consulta la tabla 'profiles' para obtener el rol del usuario autenticado.
 // Si no hay sesión activa (acceso vía magic_link), default = 'client'.
-// ⚠️ REEMPLAZA ESTE EMAIL CON EL CORREO REAL DE LA AGENCIA:
-const AGENCY_EMAIL = 'sendchamba872@gmail.com';
+// Para asignar rol 'agency': UPDATE profiles SET role = 'agency' WHERE email = 'tu@email.com';
 
 let currentUserRole = 'client';  // Default: client (se actualiza async)
 let currentUserLabel = 'Cliente';
@@ -36,15 +35,27 @@ async function detectUserRole() {
       currentUserEmail = null;
       return;
     }
+
     currentUserEmail = user.email;
-    if (user.email === AGENCY_EMAIL) {
-      currentUserRole = 'agency';
-      currentUserLabel = 'Agencia';
-    } else {
+
+    // Query the profiles table for the user's role
+    const { data: profile, error: profError } = await window.supabaseClient
+      .from('profiles')
+      .select('role, full_name')
+      .eq('id', user.id)
+      .single();
+
+    if (profError || !profile) {
+      console.warn('[Auth] Profile not found, defaulting to client:', profError?.message);
       currentUserRole = 'client';
       currentUserLabel = 'Cliente';
+      return;
     }
-    console.log(`[Auth] Detected: ${currentUserRole} (email: ${user.email})`);
+
+    currentUserRole = profile.role === 'agency' ? 'agency' : 'client';
+    currentUserLabel = currentUserRole === 'agency' ? 'Agencia' : 'Cliente';
+
+    console.log(`[Auth] Profile loaded → role: ${currentUserRole}, name: ${profile.full_name || 'N/A'}, email: ${user.email}`);
   } catch (err) {
     console.warn('[Auth] Error detecting role, defaulting to client:', err);
     currentUserRole = 'client';
