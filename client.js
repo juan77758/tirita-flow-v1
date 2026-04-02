@@ -16,6 +16,17 @@ let activeThreadItemId = null;
 let threadMessages = [];
 let threadFileVersions = [];
 
+// ── User Role Detection ──
+// Reads from URL: ?role=agency  |  Default: 'client'
+// Future: replace with Supabase Auth session role lookup
+const currentUserRole = (() => {
+  const params = new URLSearchParams(window.location.search);
+  const role = (params.get('role') || '').toLowerCase().trim();
+  return role === 'agency' ? 'agency' : 'client';
+})();
+const currentUserLabel = currentUserRole === 'agency' ? 'Agencia' : 'Cliente';
+console.log(`[Auth] Portal role: ${currentUserRole} (label: ${currentUserLabel})`);
+
 // ── DOM ──
 const toastContainer = document.getElementById('toast-container');
 const loadingOverlay = document.getElementById('loading-overlay');
@@ -117,6 +128,23 @@ async function loadProject() {
     renderChecklist();
     renderPins();
     hideLoading();
+
+    // Agency mode indicator
+    if (currentUserRole === 'agency') {
+      const badge = document.createElement('div');
+      badge.className = 'agency-mode-badge';
+      badge.innerHTML = '🩹 Modo Agencia';
+      badge.style.cssText = 'background:rgba(43,62,107,0.85);color:#fff;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;text-align:center;margin:8px 16px;border:1px solid rgba(43,62,107,0.9);';
+      const masterPanel = document.getElementById('master-panel');
+      if (masterPanel) masterPanel.insertBefore(badge, masterPanel.children[1]);
+    }
+    // Update comment input placeholder based on role
+    const commentInput = document.getElementById('thread-comment-input');
+    if (commentInput) {
+      commentInput.placeholder = currentUserRole === 'agency'
+        ? 'Responder como Agencia...'
+        : 'Añadir comentario...';
+    }
 
     console.log(`✅ Proyecto cargado: ${projectData.name} (${projectId})`);
   } catch (err) {
@@ -488,6 +516,8 @@ async function sendThreadComment() {
   const text = input.value.trim();
   if (!text || !activeThreadItemId) return;
 
+  console.log(`[Chat] Sending as: ${currentUserRole} ("${currentUserLabel}")`);
+
   try {
     const { data: msg, error } = await window.supabaseClient
       .from('thread_messages')
@@ -495,8 +525,8 @@ async function sendThreadComment() {
         item_id: activeThreadItemId,
         project_id: projectId,
         message_type: 'comment',
-        sender_type: 'client',
-        sender_name: 'Cliente',
+        sender_type: currentUserRole,
+        sender_name: currentUserLabel,
         message_text: text
       })
       .select()
