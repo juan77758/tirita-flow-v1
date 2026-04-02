@@ -14,11 +14,11 @@
   </style>
 </head>
 <body>
-  <!-- Client Layout -->
+  <!-- Client Layout: Master Panel | Detail Panel | Iframe -->
   <div class="client-layout" id="client-layout">
-    
-    <!-- Sidebar / Checklist Drawer -->
-    <aside class="client-sidebar" id="client-sidebar">
+
+    <!-- ═══ MASTER PANEL (Deliverables List) ═══ -->
+    <aside class="master-panel" id="master-panel">
       <div class="sidebar-header">
         <div style="display:flex;align-items:center;gap:8px;">
           <div class="navbar-logo" style="width:28px;height:28px;font-size:14px;">🩹</div>
@@ -33,7 +33,7 @@
         <h3 id="greeting-text">Hola</h3>
         <p class="greeting-sub">Aquí puedes ver el progreso y subir tus archivos.</p>
       </div>
-      
+
       <!-- Progress -->
       <div style="padding:16px;border-bottom:1px solid var(--border-subtle);">
         <div class="progress-section">
@@ -54,75 +54,6 @@
         </div>
       </div>
 
-      <!-- Detail View (Hidden by default) -->
-      <div class="sidebar-content thread-detail-view" id="thread-detail-view" style="display:none;">
-        <!-- Detail Header -->
-        <div class="thread-detail-header">
-          <button class="thread-back-btn" id="thread-back-btn">
-            <span style="color:var(--brand-primary);">←</span> volver
-          </button>
-          <h3 class="thread-detail-title" id="thread-detail-title">Detalle</h3>
-        </div>
-
-        <!-- Current File Block -->
-        <div class="thread-file-block" id="thread-file-block">
-          <div class="thread-file-info">
-            <span class="thread-file-icon">📄</span>
-            <div class="thread-file-meta">
-              <span class="thread-file-name" id="thread-file-name">Ningún archivo</span>
-              <span class="thread-file-version" id="thread-file-version">Sin versión</span>
-            </div>
-          </div>
-          <a class="thread-file-download" id="thread-file-download" href="#" target="_blank" title="Descargar">
-            ⬇️
-          </a>
-        </div>
-
-        <!-- Action Buttons -->
-        <div class="thread-actions" id="thread-actions">
-          <button class="btn thread-btn-approve" id="thread-btn-approve">
-            ✅ Aprobar Esta Versión
-          </button>
-          <button class="btn thread-btn-reject" id="thread-btn-reject">
-            🔴 Solicitar Cambios
-          </button>
-        </div>
-
-        <!-- Chat Header -->
-        <div class="thread-chat-header">
-          <h4 id="thread-comment-count-display">Comentarios (0)</h4>
-        </div>
-
-        <!-- Thread / Chat Timeline -->
-        <div class="thread-timeline" id="thread-timeline">
-          <div class="thread-empty-state">
-            <span>💬</span>
-            <p>El hilo de conversación aparecerá aquí.</p>
-          </div>
-        </div>
-
-        <!-- Input Area -->
-        <div class="thread-input-area" id="thread-input-area">
-          <textarea class="form-input thread-comment-input" id="thread-comment-input" 
-            placeholder="Añadir comentario..." rows="2"></textarea>
-          <div class="thread-input-actions">
-            <label class="btn btn-ghost btn-sm thread-attach-btn" id="thread-attach-label">
-              📎 Adjuntar nueva versión
-              <input type="file" id="thread-file-input" 
-                accept="image/*,video/*,.pdf,.zip,.rar,.ai,.psd,.fig,.sketch" style="display:none;">
-            </label>
-            <button class="btn btn-primary btn-sm" id="thread-send-btn">Enviar</button>
-          </div>
-          <!-- Upload progress -->
-          <div class="thread-upload-progress" id="thread-upload-progress" style="display:none;">
-            <div class="progress-bar" style="height:4px;">
-              <div class="progress-fill" id="thread-progress-fill" style="width:0%;transition:width 0.3s;"></div>
-            </div>
-            <span class="upload-status" id="thread-upload-status">Subiendo...</span>
-          </div>
-        </div>
-      </div>
-
       <div class="sidebar-footer">
         <p style="font-size:11px;color:var(--text-muted);text-align:center;">
           Powered by <strong style="color:var(--accent-red);">Tirita Flow</strong>
@@ -130,14 +61,83 @@
       </div>
     </aside>
 
-    <!-- Main Content: Iframe + Overlay -->
+    <!-- ═══ DETAIL PANEL (Thread / Chat) ═══ -->
+    <aside class="detail-panel" id="detail-panel">
+      <!-- Detail Header -->
+      <div class="detail-panel-header">
+        <button class="thread-back-btn" id="thread-back-btn">
+          <span style="color:var(--brand-primary);">←</span> volver
+        </button>
+        <h3 class="thread-detail-title" id="thread-detail-title">Detalle</h3>
+      </div>
+
+      <!-- Current File Block -->
+      <div class="thread-file-block" id="thread-file-block">
+        <div class="thread-file-info">
+          <span class="thread-file-icon">📄</span>
+          <div class="thread-file-meta">
+            <span class="thread-file-name" id="thread-file-name">Ningún archivo</span>
+            <span class="thread-file-version" id="thread-file-version">Sin versión</span>
+          </div>
+        </div>
+        <a class="thread-file-download" id="thread-file-download" href="#" target="_blank" title="Descargar">
+          ⬇️
+        </a>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="thread-actions" id="thread-actions">
+        <button class="btn thread-btn-approve" id="thread-btn-approve">
+          ✅ Aprobar Esta Versión
+        </button>
+        <button class="btn thread-btn-reject" id="thread-btn-reject">
+          🔴 Solicitar Cambios
+        </button>
+      </div>
+
+      <!-- Chat Header -->
+      <div class="thread-chat-header">
+        <h4 id="thread-comment-count-display">💬 Comentarios (0)</h4>
+      </div>
+
+      <!-- Thread / Chat Timeline (scrollable) -->
+      <div class="thread-timeline" id="thread-timeline">
+        <div class="thread-empty-state">
+          <span>💬</span>
+          <p>Selecciona un entregable para ver el hilo.</p>
+        </div>
+      </div>
+
+      <!-- Input Area (fixed at bottom) -->
+      <div class="thread-input-area" id="thread-input-area">
+        <textarea class="form-input thread-comment-input" id="thread-comment-input"
+          placeholder="Añadir comentario..." rows="2"></textarea>
+        <div class="thread-input-actions">
+          <label class="btn btn-ghost btn-sm thread-attach-btn" id="thread-attach-label">
+            📎 Adjuntar nueva versión
+            <input type="file" id="thread-file-input"
+              accept="image/*,video/*,.pdf,.zip,.rar,.ai,.psd,.fig,.sketch" style="display:none;">
+          </label>
+          <button class="btn btn-primary btn-sm" id="thread-send-btn">Enviar</button>
+        </div>
+        <!-- Upload progress -->
+        <div class="thread-upload-progress" id="thread-upload-progress" style="display:none;">
+          <div class="progress-bar" style="height:4px;">
+            <div class="progress-fill" id="thread-progress-fill" style="width:0%;transition:width 0.3s;"></div>
+          </div>
+          <span class="upload-status" id="thread-upload-status">Subiendo...</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ═══ MAIN CONTENT: Iframe + Overlay ═══ -->
     <div class="iframe-area" id="iframe-area">
       <!-- Website iframe - normal viewport behavior -->
       <iframe id="target-iframe" src="about:blank" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
-      
+
       <!-- Transparent overlay for feedback clicks -->
       <div class="click-overlay" id="click-overlay"></div>
-      
+
       <!-- Feedback pins rendered here -->
       <div id="pins-container"></div>
     </div>

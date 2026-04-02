@@ -920,10 +920,10 @@ a:hover {
   overflow: hidden;
 }
 
-/* Sidebar / Drawer */
-.client-sidebar {
-  width: 380px;
-  min-width: 380px;
+/* ── MASTER PANEL (Deliverables List) ── */
+.master-panel {
+  width: 340px;
+  min-width: 340px;
   height: 100vh;
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-subtle);
@@ -933,9 +933,38 @@ a:hover {
   transition: transform var(--transition-base);
 }
 
-.client-sidebar.collapsed {
+.master-panel.collapsed {
   transform: translateX(-100%);
   position: absolute;
+}
+
+/* ── DETAIL PANEL (Thread / Chat) ── */
+.detail-panel {
+  width: 400px;
+  min-width: 380px;
+  height: 100vh;
+  background: var(--bg-primary);
+  border-right: 1px solid var(--border-subtle);
+  display: none; /* Hidden until a deliverable is selected */
+  flex-direction: column;
+  z-index: 99;
+  animation: detailSlideIn 280ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.detail-panel.active {
+  display: flex;
+}
+
+@keyframes detailSlideIn {
+  from { transform: translateX(-20px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+
+.detail-panel-header {
+  padding: var(--space-md) var(--space-md) var(--space-sm);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-secondary);
+  flex-shrink: 0;
 }
 
 .sidebar-header {
@@ -1117,6 +1146,12 @@ a:hover {
   cursor: pointer;
 }
 
+.checklist-card.card-active {
+  border-color: var(--brand-primary);
+  background: rgba(255, 58, 58, 0.06);
+  box-shadow: inset 3px 0 0 var(--brand-primary);
+}
+
 .checklist-card-meta {
   display: flex;
   align-items: center;
@@ -1177,25 +1212,7 @@ a:hover {
   color: var(--text-secondary);
 }
 
-/* Detail View Panel */
-.thread-detail-view {
-  display: flex;
-  flex-direction: column;
-  padding: 0 !important;
-  animation: threadSlideIn 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-
-@keyframes threadSlideIn {
-  from { transform: translateX(30px); opacity: 0; }
-  to   { transform: translateX(0); opacity: 1; }
-}
-
-/* Detail Header */
-.thread-detail-header {
-  padding: var(--space-md) var(--space-md) var(--space-sm);
-  border-bottom: 1px solid var(--border-subtle);
-}
-
+/* Detail Panel Internal Styles */
 .thread-back-btn {
   background: none;
   border: none;
@@ -1237,6 +1254,7 @@ a:hover {
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
+  flex-shrink: 0;
 }
 
 .thread-file-info {
@@ -1290,6 +1308,7 @@ a:hover {
   display: flex;
   gap: var(--space-sm);
   padding: 0 var(--space-md) var(--space-md);
+  flex-shrink: 0;
 }
 
 .thread-btn-approve,
@@ -1334,7 +1353,7 @@ a:hover {
   box-shadow: none;
 }
 
-/* Thread Timeline */
+/* Thread Timeline — scrollable chat area */
 .thread-timeline {
   flex: 1;
   overflow-y: auto;
@@ -1343,6 +1362,7 @@ a:hover {
   flex-direction: column;
   gap: var(--space-sm);
   -webkit-overflow-scrolling: touch;
+  min-height: 0; /* Critical for flex scroll */
 }
 
 .thread-empty-state {
@@ -1519,26 +1539,33 @@ a:hover {
   text-decoration: underline;
 }
 
-/* Input Area */
+/* Input Area — fixed at bottom of detail panel */
 .thread-input-area {
   padding: var(--space-md);
   border-top: 1px solid var(--border-subtle);
-  background: var(--bg-primary); /* Contrast against thread area */
+  background: var(--bg-secondary);
+  flex-shrink: 0; /* Never collapse */
 }
 
 .thread-comment-input {
   width: 100%;
-  resize: vertical;
-  min-height: 48px;
-  max-height: 120px;
+  resize: none;
+  min-height: 44px;
+  max-height: 100px;
   font-size: 13px;
   margin-bottom: var(--space-sm);
   background: var(--bg-card);
   color: var(--text-primary);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm) var(--space-md);
+  font-family: 'Inter', sans-serif;
 }
 
 .thread-comment-input:focus {
+  outline: none;
   border-color: var(--brand-primary);
+  box-shadow: 0 0 0 2px rgba(255, 58, 58, 0.1);
 }
 
 .thread-input-actions {
@@ -1863,23 +1890,23 @@ a:hover {
   .app-container {
     padding: var(--space-md);
   }
-  
+
   .navbar {
     padding: var(--space-sm) var(--space-md);
   }
-  
+
   .projects-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .stats-row {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .page-header h1 {
     font-size: 24px;
   }
-  
+
   .form-card {
     padding: var(--space-lg);
   }
@@ -1890,18 +1917,18 @@ a:hover {
   .client-layout {
     flex-direction: column;
     height: 100vh;
-    height: 100dvh; /* Dynamic viewport for mobile browsers */
+    height: 100dvh;
   }
 
-  /* Sidebar: full width, fills available space */
-  .client-sidebar {
+  /* Master panel: full width */
+  .master-panel {
     position: relative;
     width: 100% !important;
     min-width: 0;
     max-width: none;
     height: 0;
     flex: 1 1 0;
-    transform: none !important; /* Override JS inline transform */
+    transform: none !important;
     box-shadow: none;
     border-right: none;
     border-bottom: 1px solid var(--border-subtle);
@@ -1909,12 +1936,24 @@ a:hover {
     -webkit-overflow-scrolling: touch;
   }
 
-  /* Hide the desktop close button — tabs handle visibility now */
-  .client-sidebar .sidebar-header #close-sidebar {
+  /* Detail panel: full width overlay on mobile */
+  .detail-panel {
+    position: fixed;
+    inset: 0;
+    width: 100% !important;
+    min-width: 0;
+    max-width: none;
+    height: 100dvh;
+    z-index: 150;
+    border-right: none;
+  }
+
+  /* Hide the desktop close button — tabs handle visibility */
+  .master-panel .sidebar-header #close-sidebar {
     display: none;
   }
 
-  /* Iframe area: full width, fills available space */
+  /* Iframe area: full width */
   .iframe-area {
     width: 100%;
     flex: 1 1 0;
@@ -1922,7 +1961,7 @@ a:hover {
     min-height: 0;
   }
 
-  /* Mobile visibility toggle — applied by JS */
+  /* Mobile visibility toggle */
   .mobile-hidden {
     display: none !important;
   }
@@ -1943,7 +1982,6 @@ a:hover {
     border-top: 1px solid var(--border-subtle);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    /* Safe area for notched phones */
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
@@ -1990,8 +2028,7 @@ a:hover {
     box-shadow: 0 0 12px rgba(255, 58, 58, 0.4);
   }
 
-  /* Give content area breathing room from tab bar */
   .client-layout {
-    padding-bottom: 56px; /* Tab bar height */
+    padding-bottom: 56px;
   }
 }

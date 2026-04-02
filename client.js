@@ -27,7 +27,7 @@ const progressBar = document.getElementById('sidebar-progress-bar');
 const targetIframe = document.getElementById('target-iframe');
 const clickOverlay = document.getElementById('click-overlay');
 const pinsContainer = document.getElementById('pins-container');
-const sidebar = document.getElementById('client-sidebar');
+const sidebar = document.getElementById('master-panel');
 const feedbackModalContainer = document.getElementById('feedback-modal-container');
 
 // ── Toast ──
@@ -149,7 +149,7 @@ function renderChecklist() {
     const pill = pillMap[rs] || pillMap['pending'];
 
     return `
-    <div class="checklist-card" data-item-id="${item.id}" onclick="openThreadDetail('${item.id}')">
+    <div class="checklist-card ${activeThreadItemId === item.id ? 'card-active' : ''}" data-item-id="${item.id}" onclick="openThreadDetail('${item.id}')">
       <div class="checklist-card-header">
         <div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;">
           <div class="checklist-card-status ${rs === 'approved' ? 'status-done' : 'status-pending'}">
@@ -256,17 +256,19 @@ async function openThreadDetail(itemId) {
   const item = checklistItems.find(i => i.id === itemId);
   if (!item) return;
 
-  // Switch views: hide master, show detail
-  checklistContent.style.display = 'none';
-  const detailView = document.getElementById('thread-detail-view');
-  detailView.style.display = 'flex';
+  // Show detail panel as a separate column (master stays visible)
+  const detailPanel = document.getElementById('detail-panel');
+  detailPanel.classList.add('active');
   // Re-trigger animation
-  detailView.style.animation = 'none';
-  detailView.offsetHeight; // reflow
-  detailView.style.animation = '';
+  detailPanel.style.animation = 'none';
+  detailPanel.offsetHeight; // reflow
+  detailPanel.style.animation = '';
 
   // Set header
   document.getElementById('thread-detail-title').textContent = `Detalle: ${item.title}`;
+
+  // Highlight active card in master list
+  renderChecklist();
 
   // Fetch thread data
   await fetchThreadData(itemId);
@@ -277,11 +279,10 @@ function closeThreadDetail() {
   threadMessages = [];
   threadFileVersions = [];
 
-  // Switch views: show master, hide detail
-  document.getElementById('thread-detail-view').style.display = 'none';
-  checklistContent.style.display = '';
+  // Hide detail panel
+  document.getElementById('detail-panel').classList.remove('active');
 
-  // Refresh master view to reflect any changes
+  // Refresh master view to remove active highlight
   renderChecklist();
 }
 
@@ -868,7 +869,8 @@ async function markNoteResolved(noteId, index) {
 // ── Sidebar Toggle ──
 function toggleSidebar() {
   sidebarOpen = !sidebarOpen;
-  sidebar.style.transform = sidebarOpen ? 'translateX(0)' : 'translateX(-100%)';
+  const masterPanel = document.getElementById('master-panel');
+  masterPanel.style.transform = sidebarOpen ? 'translateX(0)' : 'translateX(-100%)';
 }
 
 // ── Helpers ──

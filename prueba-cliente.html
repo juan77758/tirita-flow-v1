@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Web de Prueba - Cliente</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      background: #f4f4f5;
+    }
+
+    .header {
+      background: #111827;
+      color: white;
+      padding: 50px;
+      font-size: 24px;
+    }
+
+    .seccion {
+      height: 600px;
+      padding: 50px;
+      border-bottom: 5px dashed #ccc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      font-weight: bold;
+      color: #555;
+    }
+
+    .bg-1 {
+      background: #e0e7ff;
+    }
+
+    .bg-2 {
+      background: #fce7f3;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="header">
+    <h1>Página del Cliente de Prueba</h1>
+    <p>Haz scroll hacia abajo para probar los pines</p>
+  </div>
+
+  <div class="seccion bg-1">Sección 1 (Pon un pin rojo aquí)</div>
+  <div class="seccion bg-2">Sección 2 (Baja más y pon otro)</div>
+  <div class="seccion bg-1">Sección 3 (Sigue bajando)</div>
+  <div class="seccion bg-2">El final de la página</div>
+
+  <script>
+    window.addEventListener('scroll', function () {
+      if (window.parent !== window) {
+        window.parent.postMessage({
+          type: 'TIRITA_SCROLL',
+          scrollTop: window.scrollY
+        }, '*');
+      }
+    });
+  </script>
+
+</body>
+
+</html>
