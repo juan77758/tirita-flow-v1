@@ -16,16 +16,67 @@ let activeThreadItemId = null;
 let threadMessages = [];
 let threadFileVersions = [];
 
-// ── User Role Detection ──
-// Reads from URL: ?role=agency  |  Default: 'client'
-// Future: replace with Supabase Auth session role lookup
-const currentUserRole = (() => {
-  const params = new URLSearchParams(window.location.search);
-  const role = (params.get('role') || '').toLowerCase().trim();
-  return role === 'agency' ? 'agency' : 'client';
-})();
-const currentUserLabel = currentUserRole === 'agency' ? 'Agencia' : 'Cliente';
-console.log(`[Auth] Portal role: ${currentUserRole} (label: ${currentUserLabel})`);
+// ── User Role Detection (Supabase Auth) ──
+// Compara el email del usuario autenticado contra el email de la Agencia.
+// Si no hay sesión activa (acceso vía magic_link), default = 'client'.
+// ⚠️ REEMPLAZA ESTE EMAIL CON EL CORREO REAL DE LA AGENCIA:
+const AGENCY_EMAIL = 'tu_correo_real_aqui@gmail.com';
+
+let currentUserRole = 'client';  // Default: client (se actualiza async)
+let currentUserLabel = 'Cliente';
+let currentUserEmail = null;
+
+async function detectUserRole() {
+  try {
+    const { data: { user }, error } = await window.supabaseClient.auth.getUser();
+    if (error || !user) {
+      console.log('[Auth] No active session — defaulting to client role');
+      currentUserRole = 'client';
+      currentUserLabel = 'Cliente';
+      currentUserEmail = null;
+      return;
+    }
+    currentUserEmail = user.email;
+    if (user.email === AGENCY_EMAIL) {
+      currentUserRole = 'agency';
+      currentUserLabel = 'Agencia';
+    } else {
+      currentUserRole = 'client';
+      currentUserLabel = 'Cliente';
+    }
+    console.log(`[Auth] Detected: ${currentUserRole} (email: ${user.email})`);
+  } catch (err) {
+    console.warn('[Auth] Error detecting role, defaulting to client:', err);
+    currentUserRole = 'client';
+    currentUserLabel = 'Cliente';
+  }
+}
+
+// ── Apply Role-Based UI ──
+function applyRoleUI() {
+  // Agency mode badge
+  const masterPanel = document.getElementById('master-panel');
+  const existingBadge = document.querySelector('.agency-mode-badge');
+  if (existingBadge) existingBadge.remove(); // Remove old badge if re-detecting
+
+  if (currentUserRole === 'agency' && masterPanel) {
+    const badge = document.createElement('div');
+    badge.className = 'agency-mode-badge';
+    badge.innerHTML = '🩹 Modo Agencia';
+    badge.style.cssText = 'background:rgba(43,62,107,0.85);color:#fff;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;text-align:center;margin:8px 16px;border:1px solid rgba(43,62,107,0.9);';
+    masterPanel.insertBefore(badge, masterPanel.children[1]);
+  }
+
+  // Update comment input placeholder
+  const commentInput = document.getElementById('thread-comment-input');
+  if (commentInput) {
+    commentInput.placeholder = currentUserRole === 'agency'
+      ? 'Responder como Agencia...'
+      : 'Añadir comentario...';
+  }
+
+  console.log(`[UI] Role UI applied: ${currentUserRole}`);
+}
 
 // ── DOM ──
 const toastContainer = document.getElementById('toast-container');
@@ -129,22 +180,9 @@ async function loadProject() {
     renderPins();
     hideLoading();
 
-    // Agency mode indicator
-    if (currentUserRole === 'agency') {
-      const badge = document.createElement('div');
-      badge.className = 'agency-mode-badge';
-      badge.innerHTML = '🩹 Modo Agencia';
-      badge.style.cssText = 'background:rgba(43,62,107,0.85);color:#fff;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;text-align:center;margin:8px 16px;border:1px solid rgba(43,62,107,0.9);';
-      const masterPanel = document.getElementById('master-panel');
-      if (masterPanel) masterPanel.insertBefore(badge, masterPanel.children[1]);
-    }
-    // Update comment input placeholder based on role
-    const commentInput = document.getElementById('thread-comment-input');
-    if (commentInput) {
-      commentInput.placeholder = currentUserRole === 'agency'
-        ? 'Responder como Agencia...'
-        : 'Añadir comentario...';
-    }
+    // Detect user role from Supabase Auth session
+    await detectUserRole();
+    applyRoleUI();
 
     console.log(`✅ Proyecto cargado: ${projectData.name} (${projectId})`);
   } catch (err) {
@@ -516,7 +554,9 @@ async function sendThreadComment() {
   const text = input.value.trim();
   if (!text || !activeThreadItemId) return;
 
-  console.log(`[Chat] Sending as: ${currentUserRole} ("${currentUserLabel}")`);
+  // Re-verify role from live auth session before every insert
+  await detectUserRole();
+  console.log(`[Chat] Sending as: ${currentUserRole} ("${currentUserLabel}") email: ${currentUserEmail || 'none'}`);
 
   try {
     const { data: msg, error } = await window.supabaseClient
