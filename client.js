@@ -11,6 +11,11 @@ let feedbackMode = false;
 let sidebarOpen = true;
 let virtualScrollTop = 0;
 
+// ── Thread State ──
+let activeThreadItemId = null;
+let threadMessages = [];
+let threadFileVersions = [];
+
 // ── DOM ──
 const toastContainer = document.getElementById('toast-container');
 const loadingOverlay = document.getElementById('loading-overlay');
@@ -120,58 +125,46 @@ async function loadProject() {
   }
 }
 
-// ── Render Checklist ──
+// ── Render Checklist (Master View) ──
 function renderChecklist() {
   const total = checklistItems.length;
-  const completed = checklistItems.filter(i => i.status === 'completed').length;
+  const completed = checklistItems.filter(i => i.status === 'completed' || i.review_status === 'approved').length;
   const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   progressText.textContent = `${percent}%`;
   progressBar.style.width = `${percent}%`;
   if (percent === 100) progressBar.style.background = 'var(--accent-green)';
 
-  checklistContent.innerHTML = checklistItems.map(item => `
-    <div class="checklist-card ${item.status === 'completed' ? 'completed' : ''}" data-item-id="${item.id}">
-      <div class="checklist-card-header">
-        <div class="checklist-card-status ${item.status === 'completed' ? 'status-done' : 'status-pending'}">
-          ${item.status === 'completed' ? '✅' : '⏳'}
-        </div>
-        <span class="checklist-card-title">${escapeHtml(item.title)}</span>
-      </div>
-      ${item.status === 'completed' && item.file_url ? `
-        <a href="${item.file_url}" target="_blank" class="btn btn-ghost btn-sm" style="margin-top:8px;font-size:11px;">
-          📎 Ver archivo entregado
-        </a>
-      ` : item.status !== 'completed' ? `
-        <div class="upload-zone" data-item-id="${item.id}">
-          <input type="file" class="file-input" id="file-${item.id}" 
-            accept="image/*,video/*,.pdf,.zip,.rar,.ai,.psd,.fig,.sketch"
-            style="display:none;">
-          <button class="btn btn-secondary btn-sm upload-btn" 
-            onclick="document.getElementById('file-${item.id}').click()">
-            📤 Subir archivo
-          </button>
-          <span class="upload-hint">Arrastra o selecciona tu archivo</span>
-          <div class="upload-progress" id="progress-${item.id}" style="display:none;">
-            <div class="progress-bar" style="height:4px;">
-              <div class="progress-fill" id="progress-fill-${item.id}" style="width:0%;transition:width 0.3s;"></div>
-            </div>
-            <span class="upload-status" id="status-${item.id}">Subiendo...</span>
-          </div>
-        </div>
-      ` : ''}
-    </div>
-  `).join('');
+  checklistContent.innerHTML = checklistItems.map(item => {
+    const rs = item.review_status || 'pending';
+    const ver = item.current_version || 0;
+    const comments = item.comment_count || 0;
 
-  // Attach file input listeners
-  checklistItems.forEach(item => {
-    if (item.status !== 'completed') {
-      const fileInput = document.getElementById(`file-${item.id}`);
-      if (fileInput) {
-        fileInput.addEventListener('change', (e) => handleFileUpload(e, item.id));
-      }
-    }
-  });
+    const pillMap = {
+      'pending':            { cls: 'pill-pending',           icon: '⚪', label: 'Pendiente' },
+      'in_review':          { cls: 'pill-in-review',         icon: '🟡', label: `V${ver} - En Revisión` },
+      'changes_requested':  { cls: 'pill-changes-requested', icon: '🔴', label: `V${ver} - Cambios` },
+      'approved':           { cls: 'pill-approved',          icon: '🟢', label: `V${ver} - Aprobado` },
+    };
+    const pill = pillMap[rs] || pillMap['pending'];
+
+    return `
+    <div class="checklist-card" data-item-id="${item.id}" onclick="openThreadDetail('${item.id}')">
+      <div class="checklist-card-header">
+        <div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;">
+          <div class="checklist-card-status ${rs === 'approved' ? 'status-done' : 'status-pending'}">
+            ${rs === 'approved' ? '✅' : '⏳'}
+          </div>
+          <span class="checklist-card-title">${escapeHtml(item.title)}</span>
+        </div>
+        <span class="checklist-card-arrow">›</span>
+      </div>
+      <div class="checklist-card-meta">
+        <span class="review-pill ${pill.cls}">${pill.icon} ${pill.label}</span>
+        ${comments > 0 ? `<span class="comment-count-badge">💬 ${comments}</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
 }
 
 // ── File Upload via Supabase Edge Function ──
@@ -251,6 +244,415 @@ async function handleFileUpload(event, itemId) {
     progressFill.style.width = '0%';
     statusEl.textContent = '❌ Error al subir';
     showToast(`Error: ${err.message}`, 'error');
+  }
+}
+
+// ══════════════════════════════════════════════
+// ── Delivery Thread System (Master-Detail) ──
+// ══════════════════════════════════════════════
+
+async function openThreadDetail(itemId) {
+  activeThreadItemId = itemId;
+  const item = checklistItems.find(i => i.id === itemId);
+  if (!item) return;
+
+  // Switch views: hide master, show detail
+  checklistContent.style.display = 'none';
+  const detailView = document.getElementById('thread-detail-view');
+  detailView.style.display = 'flex';
+  // Re-trigger animation
+  detailView.style.animation = 'none';
+  detailView.offsetHeight; // reflow
+  detailView.style.animation = '';
+
+  // Set header
+  document.getElementById('thread-detail-title').textContent = `Detalle: ${item.title}`;
+
+  // Fetch thread data
+  await fetchThreadData(itemId);
+}
+
+function closeThreadDetail() {
+  activeThreadItemId = null;
+  threadMessages = [];
+  threadFileVersions = [];
+
+  // Switch views: show master, hide detail
+  document.getElementById('thread-detail-view').style.display = 'none';
+  checklistContent.style.display = '';
+
+  // Refresh master view to reflect any changes
+  renderChecklist();
+}
+
+async function fetchThreadData(itemId) {
+  try {
+    // Fetch file versions
+    const { data: versions, error: vErr } = await window.supabaseClient
+      .from('file_versions')
+      .select('*')
+      .eq('item_id', itemId)
+      .order('version_number', { ascending: true });
+
+    if (vErr) throw vErr;
+    threadFileVersions = versions || [];
+
+    // Fetch thread messages
+    const { data: messages, error: mErr } = await window.supabaseClient
+      .from('thread_messages')
+      .select('*')
+      .eq('item_id', itemId)
+      .order('created_at', { ascending: true });
+
+    if (mErr) throw mErr;
+    threadMessages = messages || [];
+
+    renderThread();
+  } catch (err) {
+    console.error('Error fetching thread:', err);
+    showToast('Error al cargar el hilo.', 'error');
+  }
+}
+
+function renderThread() {
+  const item = checklistItems.find(i => i.id === activeThreadItemId);
+  if (!item) return;
+
+  // ── File Block ──
+  const latestVersion = threadFileVersions.length > 0
+    ? threadFileVersions[threadFileVersions.length - 1]
+    : null;
+
+  const fileName = document.getElementById('thread-file-name');
+  const fileVersion = document.getElementById('thread-file-version');
+  const fileDownload = document.getElementById('thread-file-download');
+
+  if (latestVersion) {
+    fileName.textContent = latestVersion.file_name;
+    fileVersion.textContent = `Versión ${latestVersion.version_number}`;
+    fileDownload.href = latestVersion.file_url;
+    fileDownload.style.display = '';
+  } else if (item.file_url) {
+    fileName.textContent = 'Archivo entregado';
+    fileVersion.textContent = 'V1';
+    fileDownload.href = item.file_url;
+    fileDownload.style.display = '';
+  } else {
+    fileName.textContent = 'Sin archivo aún';
+    fileVersion.textContent = 'Esperando primera entrega';
+    fileDownload.style.display = 'none';
+  }
+
+  // ── Action buttons state ──
+  const approveBtn = document.getElementById('thread-btn-approve');
+  const rejectBtn = document.getElementById('thread-btn-reject');
+  const rs = item.review_status || 'pending';
+
+  if (rs === 'approved') {
+    approveBtn.disabled = true;
+    approveBtn.textContent = '✅ Aprobado';
+    rejectBtn.disabled = true;
+  } else if (rs === 'pending' && !latestVersion && !item.file_url) {
+    // No files yet — disable actions
+    approveBtn.disabled = true;
+    rejectBtn.disabled = true;
+  } else {
+    approveBtn.disabled = false;
+    approveBtn.textContent = '✅ Aprobar Esta Versión';
+    rejectBtn.disabled = false;
+  }
+
+  // ── Timeline ──
+  const timeline = document.getElementById('thread-timeline');
+
+  if (threadMessages.length === 0 && threadFileVersions.length === 0) {
+    timeline.innerHTML = `
+      <div class="thread-empty-state">
+        <span>💬</span>
+        <p>Aún no hay actividad. Sube un archivo o deja un comentario para iniciar el hilo.</p>
+      </div>`;
+    return;
+  }
+
+  // Build a unified chronological timeline
+  const events = [];
+
+  // Add file version events that don't have a corresponding message
+  threadFileVersions.forEach(v => {
+    const hasMsg = threadMessages.some(m => m.file_version_id === v.id);
+    if (!hasMsg) {
+      events.push({
+        type: 'system_upload',
+        sender_type: v.uploaded_by || 'client',
+        sender_name: v.uploaded_by === 'agency' ? 'Agencia' : 'Cliente',
+        message_text: `Subió ${v.file_name} (V${v.version_number})`,
+        file_url: v.file_url,
+        created_at: v.created_at
+      });
+    }
+  });
+
+  // Add messages
+  threadMessages.forEach(m => {
+    events.push(m);
+  });
+
+  // Sort chronologically
+  events.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+  timeline.innerHTML = events.map(ev => {
+    const isSystem = ev.message_type?.startsWith('system') || ev.type === 'system_upload';
+    const avatarClass = ev.sender_type === 'agency' ? 'avatar-agency'
+                      : ev.sender_type === 'system' ? 'avatar-system'
+                      : 'avatar-client';
+    const avatarIcon = ev.sender_type === 'agency' ? '🏢'
+                     : ev.sender_type === 'system' ? '⚙️'
+                     : '👤';
+    const time = formatTimeAgo(ev.created_at);
+    const fileLink = ev.file_url
+      ? `<a href="${ev.file_url}" target="_blank" class="thread-msg-file-link">📎 Ver archivo</a>`
+      : '';
+
+    return `
+    <div class="thread-msg ${isSystem ? 'msg-system' : ''}">
+      <div class="thread-msg-avatar ${avatarClass}">${avatarIcon}</div>
+      <div class="thread-msg-body">
+        <div class="thread-msg-header">
+          <span class="thread-msg-sender">${escapeHtml(ev.sender_name || 'Sistema')}</span>
+          <span class="thread-msg-time">${time}</span>
+        </div>
+        <div class="thread-msg-text">${escapeHtml(ev.message_text)}</div>
+        ${fileLink}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Auto-scroll to bottom
+  setTimeout(() => { timeline.scrollTop = timeline.scrollHeight; }, 50);
+}
+
+function formatTimeAgo(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diff = Math.floor((now - d) / 1000);
+  if (diff < 60) return 'ahora';
+  if (diff < 3600) return `hace ${Math.floor(diff / 60)}m`;
+  if (diff < 86400) return `hace ${Math.floor(diff / 3600)}h`;
+  return d.toLocaleDateString('es', { day: 'numeric', month: 'short' });
+}
+
+async function sendThreadComment() {
+  const input = document.getElementById('thread-comment-input');
+  const text = input.value.trim();
+  if (!text || !activeThreadItemId) return;
+
+  try {
+    const { data: msg, error } = await window.supabaseClient
+      .from('thread_messages')
+      .insert({
+        item_id: activeThreadItemId,
+        project_id: projectId,
+        message_type: 'comment',
+        sender_type: 'client',
+        sender_name: 'Cliente',
+        message_text: text
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    threadMessages.push(msg);
+    input.value = '';
+
+    // Update comment count locally
+    const item = checklistItems.find(i => i.id === activeThreadItemId);
+    if (item) item.comment_count = (item.comment_count || 0) + 1;
+
+    renderThread();
+  } catch (err) {
+    console.error('Error sending comment:', err);
+    showToast('Error al enviar comentario.', 'error');
+  }
+}
+
+async function uploadThreadVersion(event) {
+  const file = event.target.files[0];
+  if (!file || !activeThreadItemId) return;
+
+  if (file.size > 500 * 1024 * 1024) {
+    showToast('El archivo excede 500 MB.', 'error');
+    return;
+  }
+
+  const progressEl = document.getElementById('thread-upload-progress');
+  const progressFill = document.getElementById('thread-progress-fill');
+  const statusEl = document.getElementById('thread-upload-status');
+
+  progressEl.style.display = 'block';
+  statusEl.textContent = 'Preparando subida...';
+  progressFill.style.width = '10%';
+
+  try {
+    const folderId = projectData.gdrive_folder_id;
+    if (!folderId) throw new Error('Proyecto sin carpeta de Drive.');
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('folderId', folderId);
+    formData.append('projectId', projectId);
+    formData.append('itemId', activeThreadItemId);
+
+    statusEl.textContent = `Subiendo ${file.name}...`;
+    progressFill.style.width = '30%';
+
+    const response = await fetch(window.EDGE_FUNCTION_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'apikey': SUPABASE_ANON_KEY,
+      },
+      body: formData,
+    });
+
+    progressFill.style.width = '70%';
+
+    if (!response.ok) {
+      let errMsg = `Error HTTP ${response.status}`;
+      try { const b = await response.json(); errMsg = b.error || errMsg; } catch (_) {}
+      throw new Error(errMsg);
+    }
+
+    const result = await response.json();
+    progressFill.style.width = '90%';
+
+    // Determine next version number
+    const nextVer = threadFileVersions.length > 0
+      ? Math.max(...threadFileVersions.map(v => v.version_number)) + 1
+      : 1;
+
+    // Insert file version record
+    const { data: version, error: vErr } = await window.supabaseClient
+      .from('file_versions')
+      .insert({
+        item_id: activeThreadItemId,
+        project_id: projectId,
+        version_number: nextVer,
+        file_name: file.name,
+        file_url: result.fileUrl || result.url || '#',
+        file_size: file.size,
+        uploaded_by: 'client'
+      })
+      .select()
+      .single();
+
+    if (vErr) throw vErr;
+
+    // Insert system message
+    const { data: sysMsg, error: mErr } = await window.supabaseClient
+      .from('thread_messages')
+      .insert({
+        item_id: activeThreadItemId,
+        project_id: projectId,
+        message_type: 'system_upload',
+        sender_type: 'client',
+        sender_name: 'Cliente',
+        message_text: `Subió ${file.name} (V${nextVer})`,
+        file_version_id: version.id
+      })
+      .select()
+      .single();
+
+    if (mErr) throw mErr;
+
+    // Update checklist item status
+    await window.supabaseClient
+      .from('checklist_items')
+      .update({
+        review_status: 'in_review',
+        current_version: nextVer,
+        status: 'completed',
+        file_url: result.fileUrl || result.url || '#'
+      })
+      .eq('id', activeThreadItemId);
+
+    // Update local state
+    const item = checklistItems.find(i => i.id === activeThreadItemId);
+    if (item) {
+      item.review_status = 'in_review';
+      item.current_version = nextVer;
+      item.status = 'completed';
+      item.file_url = result.fileUrl || result.url || '#';
+    }
+
+    threadFileVersions.push(version);
+    threadMessages.push(sysMsg);
+
+    progressFill.style.width = '100%';
+    statusEl.textContent = '✅ ¡Versión subida!';
+    showToast(`V${nextVer} de "${file.name}" subida exitosamente.`, 'success');
+
+    setTimeout(() => { progressEl.style.display = 'none'; }, 2000);
+    renderThread();
+  } catch (err) {
+    console.error('Upload error:', err);
+    progressFill.style.width = '0%';
+    statusEl.textContent = '❌ Error al subir';
+    showToast(`Error: ${err.message}`, 'error');
+  }
+
+  // Reset input
+  event.target.value = '';
+}
+
+async function updateDeliverableStatus(status) {
+  if (!activeThreadItemId) return;
+  const item = checklistItems.find(i => i.id === activeThreadItemId);
+  if (!item) return;
+
+  const statusLabel = status === 'approved' ? 'Aprobado' : 'Cambios Solicitados';
+
+  try {
+    // Update DB
+    const { error } = await window.supabaseClient
+      .from('checklist_items')
+      .update({ review_status: status })
+      .eq('id', activeThreadItemId);
+
+    if (error) throw error;
+
+    // Insert system message
+    const msgType = status === 'approved' ? 'system_approved' : 'system_changes_requested';
+    const msgText = status === 'approved'
+      ? `✅ Cliente aprobó la V${item.current_version || 1}.`
+      : `🔴 Cliente solicitó cambios en V${item.current_version || 1}.`;
+
+    const { data: sysMsg, error: mErr } = await window.supabaseClient
+      .from('thread_messages')
+      .insert({
+        item_id: activeThreadItemId,
+        project_id: projectId,
+        message_type: msgType,
+        sender_type: 'system',
+        sender_name: 'Sistema',
+        message_text: msgText
+      })
+      .select()
+      .single();
+
+    if (mErr) throw mErr;
+
+    // Update local
+    item.review_status = status;
+    if (status === 'approved') item.status = 'completed';
+    threadMessages.push(sysMsg);
+
+    showToast(`Estado actualizado: ${statusLabel}`, 'success');
+    renderThread();
+  } catch (err) {
+    console.error('Error updating status:', err);
+    showToast('Error al actualizar el estado.', 'error');
   }
 }
 
@@ -372,7 +774,7 @@ function renderPins() {
 // Users must inject the provided script snippet into their client sites.
 function initScrollTracking() {
   window.addEventListener('message', (e) => {
-    if (e.data && e.data.type === 'TIRITA_SCROLL') {
+    if (e.data && (e.data.type === 'TIRITA_SCROLL' || e.data.type === 'tiritaScroll')) {
       virtualScrollTop = e.data.scrollTop || 0;
       syncPinsTransform();
     }
@@ -468,12 +870,115 @@ function hideLoading() {
   loadingOverlay.style.display = 'none';
 }
 
+// ── Mobile Tab System ──
+const mobileQuery = window.matchMedia('(max-width: 768px)');
+let currentMobileTab = 'entregables'; // Default tab on mobile
+
+function isMobile() {
+  return mobileQuery.matches;
+}
+
+function switchMobileTab(tab) {
+  if (!isMobile()) return;
+
+  const iframeArea = document.getElementById('iframe-area');
+  const sidebarBtn = document.getElementById('toggle-sidebar-btn');
+  const feedbackBtn = document.getElementById('toggle-feedback-btn');
+
+  currentMobileTab = tab;
+
+  if (tab === 'entregables') {
+    // Show sidebar, hide iframe
+    sidebar.classList.remove('mobile-hidden');
+    iframeArea.classList.add('mobile-hidden');
+    sidebarBtn.classList.add('active');
+    feedbackBtn.classList.remove('active');
+
+    // Deactivate feedback mode when switching away
+    if (feedbackMode) {
+      feedbackMode = false;
+      clickOverlay.style.pointerEvents = 'none';
+      clickOverlay.style.cursor = 'default';
+    }
+  } else {
+    // Show iframe, hide sidebar
+    sidebar.classList.add('mobile-hidden');
+    iframeArea.classList.remove('mobile-hidden');
+    sidebarBtn.classList.remove('active');
+    feedbackBtn.classList.add('active');
+
+    // Auto-activate feedback mode on mobile when switching to this tab
+    if (!feedbackMode) {
+      feedbackMode = true;
+      clickOverlay.style.pointerEvents = 'auto';
+      clickOverlay.style.cursor = 'crosshair';
+      showToast('Modo feedback activado. Toca la web para comentar.', 'info');
+    }
+  }
+}
+
+function handleMobileResize() {
+  const iframeArea = document.getElementById('iframe-area');
+  const sidebarBtn = document.getElementById('toggle-sidebar-btn');
+  const feedbackBtn = document.getElementById('toggle-feedback-btn');
+
+  if (isMobile()) {
+    // Entering mobile — apply current tab state
+    switchMobileTab(currentMobileTab);
+  } else {
+    // Leaving mobile — restore desktop defaults
+    sidebar.classList.remove('mobile-hidden');
+    iframeArea.classList.remove('mobile-hidden');
+    sidebarBtn.classList.remove('active');
+    // Feedback button keeps its own active state from toggleFeedbackMode
+    if (!feedbackMode) feedbackBtn.classList.remove('active');
+  }
+}
+
 // ── Initialize ──
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('toggle-sidebar-btn').addEventListener('click', toggleSidebar);
-  document.getElementById('toggle-feedback-btn').addEventListener('click', toggleFeedbackMode);
+  const sidebarBtn = document.getElementById('toggle-sidebar-btn');
+  const feedbackBtn = document.getElementById('toggle-feedback-btn');
+
+  sidebarBtn.addEventListener('click', () => {
+    if (isMobile()) {
+      switchMobileTab('entregables');
+    } else {
+      toggleSidebar();
+    }
+  });
+
+  feedbackBtn.addEventListener('click', () => {
+    if (isMobile()) {
+      switchMobileTab('feedback');
+    } else {
+      toggleFeedbackMode();
+    }
+  });
+
   document.getElementById('close-sidebar').addEventListener('click', toggleSidebar);
   clickOverlay.addEventListener('click', handleOverlayClick);
+
+  // ── Thread Detail Listeners ──
+  document.getElementById('thread-back-btn').addEventListener('click', closeThreadDetail);
+  document.getElementById('thread-btn-approve').addEventListener('click', () => updateDeliverableStatus('approved'));
+  document.getElementById('thread-btn-reject').addEventListener('click', () => updateDeliverableStatus('changes_requested'));
+  document.getElementById('thread-send-btn').addEventListener('click', sendThreadComment);
+  document.getElementById('thread-comment-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendThreadComment();
+    }
+  });
+  document.getElementById('thread-file-input').addEventListener('change', uploadThreadVersion);
+
+  // Listen for viewport changes (rotate device, resize window)
+  mobileQuery.addEventListener('change', handleMobileResize);
+
+  // Set initial mobile state
+  if (isMobile()) {
+    switchMobileTab('entregables');
+  }
 
   initScrollTracking();
   loadProject();

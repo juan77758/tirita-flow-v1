@@ -47,10 +47,74 @@
         </div>
       </div>
 
-      <!-- Checklist Content -->
+      <!-- Checklist Content (Master View) -->
       <div class="sidebar-content" id="checklist-content">
         <div style="display:flex;align-items:center;justify-content:center;height:200px;">
           <div class="spinner"></div>
+        </div>
+      </div>
+
+      <!-- Detail View (Hidden by default) -->
+      <div class="sidebar-content thread-detail-view" id="thread-detail-view" style="display:none;">
+        <!-- Detail Header -->
+        <div class="thread-detail-header">
+          <button class="thread-back-btn" id="thread-back-btn">
+            <span>←</span> Entregables
+          </button>
+          <h3 class="thread-detail-title" id="thread-detail-title">Detalle</h3>
+        </div>
+
+        <!-- Current File Block -->
+        <div class="thread-file-block" id="thread-file-block">
+          <div class="thread-file-info">
+            <span class="thread-file-icon">📄</span>
+            <div class="thread-file-meta">
+              <span class="thread-file-name" id="thread-file-name">Ningún archivo</span>
+              <span class="thread-file-version" id="thread-file-version">Sin versión</span>
+            </div>
+          </div>
+          <a class="thread-file-download" id="thread-file-download" href="#" target="_blank" title="Descargar">
+            ⬇️
+          </a>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="thread-actions" id="thread-actions">
+          <button class="btn thread-btn-approve" id="thread-btn-approve">
+            ✅ Aprobar Esta Versión
+          </button>
+          <button class="btn thread-btn-reject" id="thread-btn-reject">
+            🔴 Solicitar Cambios
+          </button>
+        </div>
+
+        <!-- Thread / Chat Timeline -->
+        <div class="thread-timeline" id="thread-timeline">
+          <div class="thread-empty-state">
+            <span>💬</span>
+            <p>El hilo de conversación aparecerá aquí.</p>
+          </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="thread-input-area" id="thread-input-area">
+          <textarea class="form-input thread-comment-input" id="thread-comment-input" 
+            placeholder="Añadir comentario..." rows="2"></textarea>
+          <div class="thread-input-actions">
+            <label class="btn btn-ghost btn-sm thread-attach-btn" id="thread-attach-label">
+              📎 Adjuntar nueva versión
+              <input type="file" id="thread-file-input" 
+                accept="image/*,video/*,.pdf,.zip,.rar,.ai,.psd,.fig,.sketch" style="display:none;">
+            </label>
+            <button class="btn btn-primary btn-sm" id="thread-send-btn">Enviar</button>
+          </div>
+          <!-- Upload progress -->
+          <div class="thread-upload-progress" id="thread-upload-progress" style="display:none;">
+            <div class="progress-bar" style="height:4px;">
+              <div class="progress-fill" id="thread-progress-fill" style="width:0%;transition:width 0.3s;"></div>
+            </div>
+            <span class="upload-status" id="thread-upload-status">Subiendo...</span>
+          </div>
         </div>
       </div>
 

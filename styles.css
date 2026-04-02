@@ -1110,6 +1110,388 @@ a:hover {
   text-decoration: underline;
 }
 
+/* ── Delivery Thread Master-Detail System ── */
+
+/* Master View: Enhanced Checklist Cards */
+.checklist-card {
+  cursor: pointer;
+}
+
+.checklist-card-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.review-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.review-pill.pill-pending {
+  background: rgba(136, 136, 160, 0.12);
+  color: var(--text-muted);
+}
+
+.review-pill.pill-in-review {
+  background: var(--accent-amber-subtle);
+  color: var(--accent-amber);
+}
+
+.review-pill.pill-changes-requested {
+  background: var(--accent-red-subtle);
+  color: var(--accent-red);
+}
+
+.review-pill.pill-approved {
+  background: var(--accent-green-subtle);
+  color: var(--accent-green);
+}
+
+.comment-count-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.checklist-card-arrow {
+  color: var(--text-muted);
+  font-size: 16px;
+  transition: transform var(--transition-fast);
+}
+
+.checklist-card:hover .checklist-card-arrow {
+  transform: translateX(3px);
+  color: var(--text-secondary);
+}
+
+/* Detail View Panel */
+.thread-detail-view {
+  display: flex;
+  flex-direction: column;
+  padding: 0 !important;
+  animation: threadSlideIn 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes threadSlideIn {
+  from { transform: translateX(30px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+
+/* Detail Header */
+.thread-detail-header {
+  padding: var(--space-md) var(--space-md) var(--space-sm);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.thread-back-btn {
+  background: none;
+  border: none;
+  color: var(--accent-red);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color var(--transition-fast);
+}
+
+.thread-back-btn:hover {
+  color: var(--accent-amber);
+}
+
+.thread-back-btn span {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.thread-detail-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-top: var(--space-sm);
+}
+
+/* File Block */
+.thread-file-block {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-md);
+  margin: var(--space-md);
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.thread-file-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+.thread-file-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.thread-file-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.thread-file-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.thread-file-version {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.thread-file-download {
+  font-size: 20px;
+  cursor: pointer;
+  text-decoration: none;
+  flex-shrink: 0;
+  padding: var(--space-xs);
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
+}
+
+.thread-file-download:hover {
+  background: var(--bg-elevated);
+}
+
+/* Action Buttons */
+.thread-actions {
+  display: flex;
+  gap: var(--space-sm);
+  padding: 0 var(--space-md) var(--space-md);
+}
+
+.thread-btn-approve,
+.thread-btn-reject {
+  flex: 1;
+  padding: 10px var(--space-md);
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: 'Inter', sans-serif;
+  border: none;
+}
+
+.thread-btn-approve {
+  background: var(--accent-green-subtle);
+  color: var(--accent-green);
+  border: 1px solid rgba(0, 230, 118, 0.2);
+}
+
+.thread-btn-approve:hover {
+  background: rgba(0, 230, 118, 0.2);
+  box-shadow: 0 0 12px rgba(0, 230, 118, 0.15);
+}
+
+.thread-btn-reject {
+  background: var(--accent-red-subtle);
+  color: var(--accent-red);
+  border: 1px solid rgba(255, 58, 58, 0.2);
+}
+
+.thread-btn-reject:hover {
+  background: rgba(255, 58, 58, 0.2);
+  box-shadow: 0 0 12px rgba(255, 58, 58, 0.15);
+}
+
+.thread-btn-approve:disabled,
+.thread-btn-reject:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Thread Timeline */
+.thread-timeline {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  -webkit-overflow-scrolling: touch;
+}
+
+.thread-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2xl);
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.thread-empty-state span {
+  font-size: 32px;
+  margin-bottom: var(--space-sm);
+}
+
+/* Thread Message Bubbles */
+.thread-msg {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: flex-start;
+  animation: msgFadeIn 200ms ease-out forwards;
+}
+
+@keyframes msgFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.thread-msg-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+  font-weight: 700;
+}
+
+.thread-msg-avatar.avatar-client {
+  background: var(--accent-amber-subtle);
+  color: var(--accent-amber);
+}
+
+.thread-msg-avatar.avatar-agency {
+  background: var(--accent-red-subtle);
+  color: var(--accent-red);
+}
+
+.thread-msg-avatar.avatar-system {
+  background: rgba(136, 136, 160, 0.12);
+  color: var(--text-muted);
+}
+
+.thread-msg-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.thread-msg-header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  margin-bottom: 2px;
+}
+
+.thread-msg-sender {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.thread-msg-time {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.thread-msg-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px var(--radius-md) var(--radius-md) var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  word-break: break-word;
+}
+
+.thread-msg.msg-system .thread-msg-text {
+  background: transparent;
+  border: 1px dashed var(--border-medium);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-style: italic;
+  text-align: center;
+  border-radius: var(--radius-sm);
+}
+
+.thread-msg-file-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--accent-amber);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.thread-msg-file-link:hover {
+  text-decoration: underline;
+}
+
+/* Input Area */
+.thread-input-area {
+  padding: var(--space-md);
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-secondary);
+}
+
+.thread-comment-input {
+  width: 100%;
+  resize: vertical;
+  min-height: 48px;
+  max-height: 120px;
+  font-size: 13px;
+  margin-bottom: var(--space-sm);
+}
+
+.thread-input-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.thread-attach-btn {
+  font-size: 12px !important;
+  cursor: pointer;
+}
+
+.thread-upload-progress {
+  margin-top: var(--space-sm);
+}
+
 /* ── Iframe Area ── */
 .iframe-area {
   flex: 1;
@@ -1433,16 +1815,118 @@ a:hover {
     font-size: 24px;
   }
   
-  .client-sidebar {
-    position: fixed;
-    left: 0;
-    top: 0;
-    width: 100%;
-    max-width: 380px;
-    box-shadow: var(--shadow-lg);
-  }
-  
   .form-card {
     padding: var(--space-lg);
+  }
+
+  /* ── Mobile Tab System for Client Portal ── */
+
+  /* Stack layout vertically */
+  .client-layout {
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh; /* Dynamic viewport for mobile browsers */
+  }
+
+  /* Sidebar: full width, fills available space */
+  .client-sidebar {
+    position: relative;
+    width: 100% !important;
+    min-width: 0;
+    max-width: none;
+    height: 0;
+    flex: 1 1 0;
+    transform: none !important; /* Override JS inline transform */
+    box-shadow: none;
+    border-right: none;
+    border-bottom: 1px solid var(--border-subtle);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Hide the desktop close button — tabs handle visibility now */
+  .client-sidebar .sidebar-header #close-sidebar {
+    display: none;
+  }
+
+  /* Iframe area: full width, fills available space */
+  .iframe-area {
+    width: 100%;
+    flex: 1 1 0;
+    height: 0;
+    min-height: 0;
+  }
+
+  /* Mobile visibility toggle — applied by JS */
+  .mobile-hidden {
+    display: none !important;
+  }
+
+  /* ── Bottom Tab Bar ── */
+  .client-toolbar {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: auto;
+    width: 100%;
+    z-index: 200;
+    display: flex;
+    gap: 0;
+    padding: 0;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-subtle);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    /* Safe area for notched phones */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .toolbar-btn {
+    flex: 1;
+    justify-content: center;
+    border: none;
+    border-radius: 0;
+    padding: 14px var(--space-md);
+    font-size: 14px;
+    font-weight: 600;
+    background: transparent;
+    color: var(--text-muted);
+    box-shadow: none;
+    backdrop-filter: none;
+    transition: color var(--transition-fast), background var(--transition-fast);
+    position: relative;
+  }
+
+  .toolbar-btn::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 20%;
+    width: 60%;
+    height: 3px;
+    border-radius: 3px 3px 0 0;
+    background: transparent;
+    transition: background var(--transition-fast);
+  }
+
+  .toolbar-btn:hover {
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  .toolbar-btn.active {
+    color: var(--text-primary);
+    background: rgba(255, 58, 58, 0.06);
+    border-color: transparent;
+  }
+
+  .toolbar-btn.active::after {
+    background: var(--gradient-brand);
+    box-shadow: 0 0 12px rgba(255, 58, 58, 0.4);
+  }
+
+  /* Give content area breathing room from tab bar */
+  .client-layout {
+    padding-bottom: 56px; /* Tab bar height */
   }
 }
