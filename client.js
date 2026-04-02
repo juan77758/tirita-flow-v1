@@ -20,7 +20,7 @@ let threadFileVersions = [];
 // Compara el email del usuario autenticado contra el email de la Agencia.
 // Si no hay sesión activa (acceso vía magic_link), default = 'client'.
 // ⚠️ REEMPLAZA ESTE EMAIL CON EL CORREO REAL DE LA AGENCIA:
-const AGENCY_EMAIL = 'tu_correo_real_aqui@gmail.com';
+const AGENCY_EMAIL = 'sendchamba872@gmail.com';
 
 let currentUserRole = 'client';  // Default: client (se actualiza async)
 let currentUserLabel = 'Cliente';
@@ -166,7 +166,7 @@ async function loadProject() {
 
     // Render UI
     projectNameSidebar.textContent = projectData.name;
-    
+
     // Welcome greeting
     const greetingEl = document.getElementById('sidebar-greeting');
     const greetingTextEl = document.getElementById('greeting-text');
@@ -207,10 +207,10 @@ function renderChecklist() {
     const comments = item.comment_count || 0;
 
     const pillMap = {
-      'pending':            { cls: 'pill-pending',           icon: '⚪', label: 'Pendiente' },
-      'in_review':          { cls: 'pill-in-review',         icon: '🟡', label: `V${ver} - En Revisión` },
-      'changes_requested':  { cls: 'pill-changes-requested', icon: '🔴', label: `V${ver} - Cambios` },
-      'approved':           { cls: 'pill-approved',          icon: '🟢', label: `V${ver} - Aprobado` },
+      'pending': { cls: 'pill-pending', icon: '⚪', label: 'Pendiente' },
+      'in_review': { cls: 'pill-in-review', icon: '🟡', label: `V${ver} - En Revisión` },
+      'changes_requested': { cls: 'pill-changes-requested', icon: '🔴', label: `V${ver} - Cambios` },
+      'approved': { cls: 'pill-approved', icon: '🟢', label: `V${ver} - Aprobado` },
     };
     const pill = pillMap[rs] || pillMap['pending'];
 
@@ -465,28 +465,28 @@ function renderThread() {
   // --- SIMULATION MODE (when no real data exists) ---
   if (events.length === 0) {
     events.push({
-      message_type: 'comment', sender_type: 'client', sender_name: 'Cliente', 
-      message_text: 'Hola, adjunto la estructura solicitada para el logo.', 
+      message_type: 'comment', sender_type: 'client', sender_name: 'Cliente',
+      message_text: 'Hola, adjunto la estructura solicitada para el logo.',
       created_at: new Date(Date.now() - 3600000).toISOString()
     });
     events.push({
-      message_type: 'comment', sender_type: 'agency', sender_name: 'Agencia', 
-      message_text: '¡Recibido! Lo revisamos y te damos feedback pronto. 👍', 
+      message_type: 'comment', sender_type: 'agency', sender_name: 'Agencia',
+      message_text: '¡Recibido! Lo revisamos y te damos feedback pronto. 👍',
       created_at: new Date(Date.now() - 2700000).toISOString()
     });
     events.push({
-      message_type: 'comment', sender_type: 'client', sender_name: 'Cliente', 
-      message_text: 'Perfecto, quedo atento.', 
+      message_type: 'comment', sender_type: 'client', sender_name: 'Cliente',
+      message_text: 'Perfecto, quedo atento.',
       created_at: new Date(Date.now() - 1800000).toISOString()
     });
     events.push({
-      message_type: 'comment', sender_type: 'agency', sender_name: 'Agencia', 
-      message_text: 'Ojo con el color del fondo, necesitamos que sea más oscuro para contraste.', 
+      message_type: 'comment', sender_type: 'agency', sender_name: 'Agencia',
+      message_text: 'Ojo con el color del fondo, necesitamos que sea más oscuro para contraste.',
       created_at: new Date(Date.now() - 900000).toISOString()
     });
     events.push({
-      message_type: 'comment', sender_type: 'client', sender_name: 'Cliente', 
-      message_text: 'creo que ya, lo ajusté. ¿Puedes revisar?', 
+      message_type: 'comment', sender_type: 'client', sender_name: 'Cliente',
+      message_text: 'creo que ya, lo ajusté. ¿Puedes revisar?',
       created_at: new Date(Date.now() - 300000).toISOString()
     });
   }
@@ -509,11 +509,11 @@ function renderThread() {
     console.log(`[Chat] sender_type="${ev.sender_type}" → class="${msgClass}" | text="${(ev.message_text || '').substring(0, 40)}"`);
 
     const avatarClass = isAgency ? 'avatar-agency'
-                      : isSystem ? 'avatar-system'
-                      : 'avatar-client';
+      : isSystem ? 'avatar-system'
+        : 'avatar-client';
     const avatarIcon = isAgency ? '🩹'
-                     : isSystem ? '⚙️'
-                     : '👤';
+      : isSystem ? '⚙️'
+        : '👤';
     const senderLabel = isAgency ? 'Agencia' : (isSystem ? 'Sistema' : 'Cliente');
     const time = formatTimeAgo(ev.created_at);
     const fileLink = ev.file_url
@@ -631,7 +631,7 @@ async function uploadThreadVersion(event) {
 
     if (!response.ok) {
       let errMsg = `Error HTTP ${response.status}`;
-      try { const b = await response.json(); errMsg = b.error || errMsg; } catch (_) {}
+      try { const b = await response.json(); errMsg = b.error || errMsg; } catch (_) { }
       throw new Error(errMsg);
     }
 
@@ -932,7 +932,7 @@ function showNoteModal(note, index) {
   document.getElementById('feedback-backdrop').addEventListener('click', (e) => {
     if (e.target === e.currentTarget) feedbackModalContainer.style.display = 'none';
   });
-  
+
   const resolveBtn = document.getElementById('resolve-note');
   if (resolveBtn) {
     resolveBtn.addEventListener('click', () => markNoteResolved(note.id, index));
