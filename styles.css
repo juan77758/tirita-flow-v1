@@ -1361,17 +1361,46 @@ a:hover {
   margin-bottom: var(--space-sm);
 }
 
+/* Thread Timeline Additions */
+.thread-chat-header {
+  padding: 0 var(--space-md);
+  margin-top: var(--space-md);
+  margin-bottom: var(--space-xs);
+}
+
+.thread-chat-header h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+.thread-chat-header h4::before {
+  content: '💬';
+}
+
 /* Thread Message Bubbles */
 .thread-msg {
   display: flex;
   gap: var(--space-sm);
-  align-items: flex-start;
+  align-items: flex-end;
   animation: msgFadeIn 200ms ease-out forwards;
+  margin-bottom: var(--space-md);
 }
 
 @keyframes msgFadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+.msg-client {
+  flex-direction: row;
+}
+
+.msg-agency {
+  flex-direction: row-reverse;
 }
 
 .thread-msg-avatar {
@@ -1387,13 +1416,15 @@ a:hover {
 }
 
 .thread-msg-avatar.avatar-client {
-  background: var(--accent-amber-subtle);
-  color: var(--accent-amber);
+  background: var(--accent-green-subtle);
+  color: var(--accent-green);
+  border: 1px solid rgba(0, 230, 118, 0.2);
 }
 
 .thread-msg-avatar.avatar-agency {
-  background: var(--accent-red-subtle);
-  color: var(--accent-red);
+  background: var(--bg-card);
+  color: var(--brand-primary);
+  border: 1px solid var(--brand-primary);
 }
 
 .thread-msg-avatar.avatar-system {
@@ -1404,6 +1435,20 @@ a:hover {
 .thread-msg-body {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.msg-client .thread-msg-body {
+  align-items: flex-start;
+}
+
+.msg-agency .thread-msg-body {
+  align-items: flex-end;
+}
+
+.msg-system .thread-msg-body {
+  align-items: center;
 }
 
 .thread-msg-header {
@@ -1411,6 +1456,10 @@ a:hover {
   align-items: baseline;
   gap: var(--space-sm);
   margin-bottom: 2px;
+}
+
+.msg-agency .thread-msg-header {
+  flex-direction: row-reverse;
 }
 
 .thread-msg-sender {
@@ -1426,13 +1475,23 @@ a:hover {
 
 .thread-msg-text {
   font-size: 13px;
-  color: var(--text-secondary);
   line-height: 1.5;
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: 4px var(--radius-md) var(--radius-md) var(--radius-md);
   padding: var(--space-sm) var(--space-md);
   word-break: break-word;
+}
+
+.msg-client .thread-msg-text {
+  background: rgba(0, 230, 118, 0.08);
+  border: 1px solid rgba(0, 230, 118, 0.2);
+  border-radius: var(--radius-md) var(--radius-md) var(--radius-md) 4px;
+  color: var(--text-primary);
+}
+
+.msg-agency .thread-msg-text {
+  background: rgba(43, 62, 107, 0.5); /* Professional Dark Blue */
+  border: 1px solid rgba(43, 62, 107, 0.8);
+  border-radius: var(--radius-md) var(--radius-md) 4px var(--radius-md);
+  color: #ffffff;
 }
 
 .thread-msg.msg-system .thread-msg-text {
@@ -1464,7 +1523,7 @@ a:hover {
 .thread-input-area {
   padding: var(--space-md);
   border-top: 1px solid var(--border-subtle);
-  background: var(--bg-secondary);
+  background: var(--bg-primary); /* Contrast against thread area */
 }
 
 .thread-comment-input {
@@ -1474,6 +1533,12 @@ a:hover {
   max-height: 120px;
   font-size: 13px;
   margin-bottom: var(--space-sm);
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.thread-comment-input:focus {
+  border-color: var(--brand-primary);
 }
 
 .thread-input-actions {

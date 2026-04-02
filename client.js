@@ -366,12 +366,7 @@ function renderThread() {
   const timeline = document.getElementById('thread-timeline');
 
   if (threadMessages.length === 0 && threadFileVersions.length === 0) {
-    timeline.innerHTML = `
-      <div class="thread-empty-state">
-        <span>💬</span>
-        <p>Aún no hay actividad. Sube un archivo o deja un comentario para iniciar el hilo.</p>
-      </div>`;
-    return;
+    // We will let the simulation handle the empty state, so no early return here anymore.
   }
 
   // Build a unified chronological timeline
@@ -400,13 +395,36 @@ function renderThread() {
   // Sort chronologically
   events.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
+  // --- SIMULATION MODE ---
+  if (events.length === 0) {
+    events.push({
+      message_type: 'comment', sender_type: 'client', sender_name: 'Cliente', message_text: 'Hola, adjunto la estructura solicitada para el logo.', created_at: new Date(Date.now() - 3600000).toISOString()
+    });
+    events.push({
+      message_type: 'comment', sender_type: 'agency', sender_name: 'Agencia', message_text: 'ok, lo revisamos y te damos feedback pronto.', created_at: new Date(Date.now() - 1800000).toISOString()
+    });
+    events.push({
+      message_type: 'comment', sender_type: 'client', sender_name: 'Cliente', message_text: 'Perfecto, quedo atento.', created_at: new Date(Date.now() - 900000).toISOString()
+    });
+  }
+  // -------------------------
+
+  const commentCountEl = document.getElementById('thread-comment-count-display');
+  if (commentCountEl) {
+    const msgCount = events.filter(e => e.message_type === 'comment' || (!e.type && !e.message_type?.startsWith('system'))).length;
+    commentCountEl.textContent = `Comentarios (${msgCount})`;
+  }
+
   timeline.innerHTML = events.map(ev => {
     const isSystem = ev.message_type?.startsWith('system') || ev.type === 'system_upload';
-    const avatarClass = ev.sender_type === 'agency' ? 'avatar-agency'
-                      : ev.sender_type === 'system' ? 'avatar-system'
+    const isAgency = ev.sender_type === 'agency';
+    const msgClass = isSystem ? 'msg-system' : (isAgency ? 'msg-agency' : 'msg-client');
+
+    const avatarClass = isAgency ? 'avatar-agency'
+                      : isSystem ? 'avatar-system'
                       : 'avatar-client';
-    const avatarIcon = ev.sender_type === 'agency' ? '🏢'
-                     : ev.sender_type === 'system' ? '⚙️'
+    const avatarIcon = isAgency ? '🩹'
+                     : isSystem ? '⚙️'
                      : '👤';
     const time = formatTimeAgo(ev.created_at);
     const fileLink = ev.file_url
@@ -414,7 +432,7 @@ function renderThread() {
       : '';
 
     return `
-    <div class="thread-msg ${isSystem ? 'msg-system' : ''}">
+    <div class="thread-msg ${msgClass}">
       <div class="thread-msg-avatar ${avatarClass}">${avatarIcon}</div>
       <div class="thread-msg-body">
         <div class="thread-msg-header">
