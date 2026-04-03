@@ -1961,12 +1961,20 @@ a:hover {
     display: none;
   }
 
-  /* Iframe area: full width */
+  /* Iframe area: full width — CROP so it ends above the bottom nav */
   .iframe-area {
     width: 100%;
     flex: 1 1 0;
     height: 0;
     min-height: 0;
+    margin-bottom: 0;
+  }
+
+  /* NUCLEAR CROP: Overlay + Pins must NEVER reach the bottom nav zone */
+  .iframe-area .click-overlay,
+  .iframe-area #pins-container {
+    height: calc(100% - 70px) !important;
+    bottom: auto !important;
   }
 
   /* Mobile visibility toggle */
@@ -1982,7 +1990,7 @@ a:hover {
     left: 0 !important;
     right: 0 !important;
     width: 100% !important;
-    z-index: 99999 !important; /* NUCLEAR: Above absolutely everything */
+    z-index: 2147483647 !important; /* CSS max int — NOTHING can be above this */
     display: flex !important;
     gap: 0;
     padding: 0;
