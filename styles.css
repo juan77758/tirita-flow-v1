@@ -1614,6 +1614,7 @@ a:hover {
   height: 100%;
   z-index: 10;
   pointer-events: none; /* Disabled by default, toggled via JS */
+  touch-action: pan-y pinch-zoom; /* Allow scroll to pass through to iframe */
 }
 
 /* ── NUCLEAR: clase para ocultar la barra cuando el teclado está abierto ── */

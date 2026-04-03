@@ -1001,9 +1001,20 @@ function isMobile() {
   return mobileQuery.matches;
 }
 
+let _tabSwitchLock = false; // Debounce lock
+
 function switchMobileTab(tab) {
   if (!isMobile()) return;
-  console.log('[Mobile] switchMobileTab called:', tab);
+  
+  // ── DEBOUNCE: prevent double-fire from touchstart+click cascade ──
+  if (_tabSwitchLock) {
+    console.log('[Mobile] BLOCKED (debounce):', tab);
+    return;
+  }
+  _tabSwitchLock = true;
+  setTimeout(() => { _tabSwitchLock = false; }, 400);
+  
+  console.log('[Mobile] switchMobileTab →', tab);
 
   const iframeArea = document.getElementById('iframe-area');
   const sidebarBtn = document.getElementById('toggle-sidebar-btn');
@@ -1016,47 +1027,42 @@ function switchMobileTab(tab) {
     sidebar.classList.remove('mobile-hidden');
     iframeArea.classList.add('mobile-hidden');
 
-    // ── SYNC ALL BUTTON STATES ──
+    // ── SYNC BUTTONS ──
     sidebarBtn.classList.add('active');
-    sidebarBtn.innerHTML = '📋 Entregables';
     feedbackBtn.classList.remove('active');
     feedbackBtn.innerHTML = '📌 Feedback';
 
-    // ── KILL OVERLAY: display + pointer + visibility + opacity ──
+    // ── KILL OVERLAY ──
     feedbackMode = false;
     if (clickOverlay) {
-      clickOverlay.style.cssText = 'display:none !important; pointer-events:none !important; visibility:hidden !important; opacity:0 !important;';
+      clickOverlay.style.cssText = 'display:none !important; pointer-events:none !important;';
     }
     if (pinsContainer) {
-      pinsContainer.style.cssText = 'display:none !important; visibility:hidden !important;';
+      pinsContainer.style.cssText = 'display:none !important;';
     }
 
-    // ── RESTORE SCROLL on iframe area ──
-    iframeArea.style.overflowY = 'auto';
-    
-    console.log('[Mobile] Entregables: overlay killed, feedbackMode=false');
+    console.log('[Mobile] → Entregables OK');
   } else {
     // ── SHOW iframe, HIDE sidebar ──
     sidebar.classList.add('mobile-hidden');
     iframeArea.classList.remove('mobile-hidden');
 
-    // ── SYNC ALL BUTTON STATES ──
+    // ── SYNC BUTTONS ──
     sidebarBtn.classList.remove('active');
-    sidebarBtn.innerHTML = '📋 Entregables';
     feedbackBtn.classList.add('active');
     feedbackBtn.innerHTML = '📌 Feedback <span style="font-size:10px;opacity:0.7">(activo)</span>';
 
-    // ── RESURRECT OVERLAY ──
+    // ── RESURRECT OVERLAY (with scroll passthrough) ──
     feedbackMode = true;
     if (clickOverlay) {
-      clickOverlay.style.cssText = 'display:block; pointer-events:auto; visibility:visible; opacity:1; cursor:crosshair;';
+      clickOverlay.style.cssText = 'display:block; pointer-events:auto; cursor:crosshair; touch-action:pan-y pinch-zoom;';
     }
     if (pinsContainer) {
-      pinsContainer.style.cssText = 'display:block; visibility:visible;';
+      pinsContainer.style.cssText = 'display:block;';
     }
 
     showToast('Modo feedback activado. Toca la web para comentar.', 'info');
-    console.log('[Mobile] Feedback: overlay active, feedbackMode=true');
+    console.log('[Mobile] → Feedback OK');
   }
 }
 
@@ -1083,63 +1089,53 @@ document.addEventListener('DOMContentLoaded', () => {
   const sidebarBtn = document.getElementById('toggle-sidebar-btn');
   const feedbackBtn = document.getElementById('toggle-feedback-btn');
 
-  // ── Handler functions ──
-  function handleSidebarBtnPress(e) {
-    console.log('[Toolbar] Sidebar btn pressed, event:', e.type);
-    if (e.type === 'touchstart') e.preventDefault(); // prevent ghost click
+  // ── SIMPLE click-only handlers (debounce in switchMobileTab prevents double-fire) ──
+  sidebarBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
     if (isMobile()) {
       switchMobileTab('entregables');
     } else {
       toggleSidebar();
     }
-  }
+  });
 
-  function handleFeedbackBtnPress(e) {
-    console.log('[Toolbar] Feedback btn pressed, event:', e.type);
-    if (e.type === 'touchstart') e.preventDefault(); // prevent ghost click
+  feedbackBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
     if (isMobile()) {
       switchMobileTab('feedback');
     } else {
       toggleFeedbackMode();
     }
-  }
-
-  // ── Attach both click AND touchstart for mobile reliability ──
-  sidebarBtn.addEventListener('click', handleSidebarBtnPress);
-  sidebarBtn.addEventListener('touchstart', handleSidebarBtnPress, { passive: false });
-  feedbackBtn.addEventListener('click', handleFeedbackBtnPress);
-  feedbackBtn.addEventListener('touchstart', handleFeedbackBtnPress, { passive: false });
+  });
 
   document.getElementById('close-sidebar').addEventListener('click', toggleSidebar);
   clickOverlay.addEventListener('click', handleOverlayClick);
 
-  // ── CRITICAL FIX: Overlay eats touches meant for the toolbar ──
-  // Intercept touches on the overlay, check if they're in the toolbar zone,
-  // and route them to the correct tab button instead.
-  clickOverlay.addEventListener('touchstart', (e) => {
-    if (!isMobile()) return;
-    const toolbar = document.getElementById('client-toolbar');
-    if (!toolbar) return;
-    
-    const toolbarRect = toolbar.getBoundingClientRect();
-    const touch = e.touches[0];
-    
-    // If touch is in the toolbar Y zone → route to buttons, NOT to pin creation
-    if (touch.clientY >= toolbarRect.top) {
-      e.preventDefault();
-      e.stopPropagation();
+  // ── Overlay touch interceptor: redirect toolbar-zone touches to tab buttons ──
+  if (clickOverlay) {
+    clickOverlay.addEventListener('touchstart', (e) => {
+      if (!isMobile()) return;
+      const toolbar = document.getElementById('client-toolbar');
+      if (!toolbar) return;
       
-      const midX = window.innerWidth / 2;
-      if (touch.clientX < midX) {
-        console.log('[TouchFix] Redirecting overlay touch → Entregables');
-        switchMobileTab('entregables');
-      } else {
-        console.log('[TouchFix] Redirecting overlay touch → Feedback');
-        switchMobileTab('feedback');
+      const touch = e.touches[0];
+      const toolbarTop = toolbar.getBoundingClientRect().top;
+      
+      // Touch is in the toolbar zone → redirect, don't create pin
+      if (touch.clientY >= toolbarTop) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (touch.clientX < window.innerWidth / 2) {
+          console.log('[Touch→Tab] Entregables');
+          switchMobileTab('entregables');
+        } else {
+          console.log('[Touch→Tab] Feedback');
+          switchMobileTab('feedback');
+        }
       }
-      return;
-    }
-  }, { passive: false, capture: true });
+    }, { passive: false, capture: true });
+  }
 
   // ── Thread Detail Listeners ──
   document.getElementById('thread-back-btn').addEventListener('click', closeThreadDetail);
