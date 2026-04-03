@@ -9,6 +9,7 @@ let checklistItems = [];
 let feedbackNotes = [];
 let feedbackMode = false;
 let sidebarOpen = true;
+let virtualScrollTop = 0;
 
 // ── Thread State ──
 let activeThreadItemId = null;
@@ -800,9 +801,9 @@ function handleOverlayClick(e) {
 
   const rect = clickOverlay.getBoundingClientRect();
   const xPercent = ((e.clientX - rect.left) / rect.width * 100).toFixed(2);
-  
-  // Optical illusion scroll hack natively places the top coordinate (which is negative if scrolled)
-  const absoluteYPx = e.clientY - rect.top;
+  // Anchor pin to document position: viewport click + scroll offset
+  const viewportYPx = e.clientY - rect.top;
+  const absoluteYPx = viewportYPx + virtualScrollTop;
   const yPercent = (absoluteYPx / rect.height * 100).toFixed(2);
 
   showFeedbackModal(xPercent, yPercent);
@@ -887,10 +888,25 @@ function renderPins() {
       <div class="pin-number">${i + 1}</div>
     </div>
   `).join('');
+
+  // Re-apply current scroll transform
+  syncPinsTransform();
 }
 
-// SCROLL TRACKING HACK NO LONGER NEEDED!
-// The "Optical Illusion Hack" wrapper now handles all scroll displacement natively.
+// ── Scroll-Anchored Pins (Native via postMessage) ──
+function initScrollTracking() {
+  window.addEventListener('message', (e) => {
+    if (e.data && (e.data.type === 'TIRITA_SCROLL' || e.data.type === 'tiritaScroll')) {
+      virtualScrollTop = e.data.scrollTop || 0;
+      syncPinsTransform();
+    }
+  });
+}
+
+function syncPinsTransform() {
+  if (!pinsContainer) return;
+  pinsContainer.style.transform = `translateY(-${virtualScrollTop}px)`;
+}
 
 pinsContainer.addEventListener('click', (e) => {
   const pin = e.target.closest('.feedback-pin');
@@ -1203,5 +1219,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  initScrollTracking();
   loadProject();
 });

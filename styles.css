@@ -1593,40 +1593,22 @@ a:hover {
   min-width: 0;
 }
 
-/* ── Scroll Wrapper Proxy (the "Optical Illusion Hack") ──
-   This div is the REAL scroll container. It holds the stretched iframe,
-   the click overlay, and the pins container — all at 6000px tall.
-   When the user scrolls this wrapper, the iframe image AND the overlay
-   move together, so pins never desync from the content. */
-#iframe-scroll-wrapper {
+.iframe-area iframe {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  overflow-y: auto !important;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch; /* smooth iOS scroll */
-}
-
-/* The iframe is "unrolled" — its internal scroll is killed (scrolling="no")
-   and it's stretched tall so the wrapper scrolls the visible window over it. */
-#iframe-scroll-wrapper iframe {
-  display: block;
-  width: 100%;
-  height: 6000px !important;
   border: none;
-  overflow: hidden !important;
-  pointer-events: auto;
+  z-index: 1;
 }
 
-/* Overlay covers the entire stretched iframe like a sheet of glass */
 .click-overlay {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
-  height: 6000px !important;  /* Must match iframe */
+  height: 100%;
   z-index: 10;
   pointer-events: none;
   touch-action: pan-y pinch-zoom;
@@ -1643,9 +1625,10 @@ a:hover {
   top: 0;
   left: 0;
   width: 100%;
-  height: 6000px !important;  /* Must match iframe */
+  height: 100%;
   pointer-events: none;
   z-index: 20;
+  will-change: transform;
   overflow: visible;
 }
 

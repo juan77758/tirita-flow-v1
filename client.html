@@ -132,16 +132,14 @@
 
     <!-- ═══ MAIN CONTENT: Iframe + Overlay ═══ -->
     <div class="iframe-area" id="iframe-area">
-      <div id="iframe-scroll-wrapper">
-        <!-- Website iframe - normal viewport behavior -->
-        <iframe id="target-iframe" src="about:blank" scrolling="no" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+      <!-- Website iframe - normal viewport behavior -->
+      <iframe id="target-iframe" src="about:blank" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
 
-        <!-- Transparent overlay for feedback clicks -->
-        <div class="click-overlay" id="click-overlay"></div>
+      <!-- Transparent overlay for feedback clicks -->
+      <div class="click-overlay" id="click-overlay"></div>
 
-        <!-- Feedback pins rendered here -->
-        <div id="pins-container"></div>
-      </div>
+      <!-- Feedback pins rendered here -->
+      <div id="pins-container"></div>
     </div>
   </div>
 
