@@ -1064,30 +1064,20 @@ function switchMobileTab(tab) {
 }
 
 // ── Floating Action Button for mobile pin placement ──
+const PIN_SVG = `<svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/>
+</svg>`;
+
+const CANCEL_SVG = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+  <line x1="18" y1="6" x2="6" y2="18"></line>
+  <line x1="6" y1="6" x2="18" y2="18"></line>
+</svg>`;
+
 function createMobilePinFAB() {
   const fab = document.createElement('button');
   fab.id = 'mobile-pin-fab';
-  fab.innerHTML = '📌';
-  fab.style.cssText = `
-    position: fixed;
-    bottom: 80px;
-    right: 16px;
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    border: none;
-    background: #e53e3e;
-    color: white;
-    font-size: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 2147483647;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-    cursor: pointer;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-  `;
+  fab.className = 'mobile-pin-fab';
+  fab.innerHTML = PIN_SVG;
   
   fab.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -1107,8 +1097,8 @@ function toggleMobilePinMode() {
       clickOverlay.style.cssText = 'display:block; pointer-events:auto; cursor:crosshair;';
     }
     if (fab) {
-      fab.style.background = '#38a169';
-      fab.innerHTML = '✕';
+      fab.classList.add('active');
+      fab.innerHTML = CANCEL_SVG;
       fab.title = 'Cancelar';
     }
     showToast('Toca la web para colocar el pin. Toca ✕ para cancelar.', 'info');
@@ -1118,8 +1108,8 @@ function toggleMobilePinMode() {
       clickOverlay.style.cssText = 'display:block; pointer-events:none; cursor:default;';
     }
     if (fab) {
-      fab.style.background = '#e53e3e';
-      fab.innerHTML = '📌';
+      fab.classList.remove('active');
+      fab.innerHTML = PIN_SVG;
       fab.title = 'Colocar pin';
     }
   }
@@ -1134,8 +1124,9 @@ function deactivateMobilePinMode() {
   }
   const fab = document.getElementById('mobile-pin-fab');
   if (fab) {
-    fab.style.background = '#e53e3e';
-    fab.innerHTML = '📌';
+    fab.classList.remove('active');
+    fab.innerHTML = PIN_SVG;
+    fab.title = 'Colocar pin';
   }
 }
 

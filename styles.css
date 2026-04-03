@@ -2059,4 +2059,36 @@ a:hover {
     bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
     height: auto !important;
   }
+
+  /* ── Mobile FAB (Floating Action Button) ── */
+  .mobile-pin-fab {
+    position: fixed;
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    right: 16px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: none;
+    background: #FF5A00; /* Naranja Principal */
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2147483647;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.4), 0 0 20px rgba(255, 90, 0, 0.2);
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease;
+  }
+
+  .mobile-pin-fab:active {
+    transform: scale(0.92) !important;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.5), 0 0 10px rgba(255, 90, 0, 0.1) !important;
+  }
+
+  .mobile-pin-fab.active {
+    background: #252535; /* Dark premium background for active state */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  }
 }
