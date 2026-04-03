@@ -807,6 +807,9 @@ function handleOverlayClick(e) {
   const yPercent = (absoluteYPx / rect.height * 100).toFixed(2);
 
   showFeedbackModal(xPercent, yPercent);
+  
+  // On mobile: auto-deactivate pin mode after placing, restore scroll
+  deactivateMobilePinMode();
 }
 
 function showFeedbackModal(x, y) {
@@ -1001,68 +1004,138 @@ function isMobile() {
   return mobileQuery.matches;
 }
 
-let _tabSwitchLock = false; // Debounce lock
+let _tabSwitchLock = false;
+let _mobilePinMode = false; // true = overlay active for ONE pin placement
 
 function switchMobileTab(tab) {
   if (!isMobile()) return;
   
-  // ── DEBOUNCE: prevent double-fire from touchstart+click cascade ──
-  if (_tabSwitchLock) {
-    console.log('[Mobile] BLOCKED (debounce):', tab);
-    return;
-  }
+  if (_tabSwitchLock) return;
   _tabSwitchLock = true;
   setTimeout(() => { _tabSwitchLock = false; }, 400);
-  
-  console.log('[Mobile] switchMobileTab →', tab);
 
   const iframeArea = document.getElementById('iframe-area');
   const sidebarBtn = document.getElementById('toggle-sidebar-btn');
   const feedbackBtn = document.getElementById('toggle-feedback-btn');
+  const fab = document.getElementById('mobile-pin-fab');
 
   currentMobileTab = tab;
 
   if (tab === 'entregables') {
-    // ── SHOW sidebar, HIDE iframe ──
     sidebar.classList.remove('mobile-hidden');
     iframeArea.classList.add('mobile-hidden');
-
-    // ── SYNC BUTTONS ──
     sidebarBtn.classList.add('active');
     feedbackBtn.classList.remove('active');
     feedbackBtn.innerHTML = '📌 Feedback';
 
-    // ── KILL OVERLAY ──
+    // Kill everything
     feedbackMode = false;
-    if (clickOverlay) {
-      clickOverlay.style.cssText = 'display:none !important; pointer-events:none !important;';
-    }
-    if (pinsContainer) {
-      pinsContainer.style.cssText = 'display:none !important;';
-    }
+    _mobilePinMode = false;
+    if (clickOverlay) clickOverlay.style.cssText = 'display:none !important; pointer-events:none !important;';
+    if (pinsContainer) pinsContainer.style.cssText = 'display:none !important;';
+    if (fab) fab.style.display = 'none';
 
-    console.log('[Mobile] → Entregables OK');
   } else {
-    // ── SHOW iframe, HIDE sidebar ──
     sidebar.classList.add('mobile-hidden');
     iframeArea.classList.remove('mobile-hidden');
-
-    // ── SYNC BUTTONS ──
     sidebarBtn.classList.remove('active');
     feedbackBtn.classList.add('active');
     feedbackBtn.innerHTML = '📌 Feedback <span style="font-size:10px;opacity:0.7">(activo)</span>';
 
-    // ── RESURRECT OVERLAY (with scroll passthrough) ──
+    // Feedback mode ON but overlay is PASSIVE (scroll works!)
     feedbackMode = true;
+    _mobilePinMode = false;
     if (clickOverlay) {
-      clickOverlay.style.cssText = 'display:block; pointer-events:auto; cursor:crosshair; touch-action:pan-y pinch-zoom;';
+      clickOverlay.style.cssText = 'display:block; pointer-events:none; cursor:default;';
     }
     if (pinsContainer) {
-      pinsContainer.style.cssText = 'display:block;';
+      pinsContainer.style.cssText = 'display:block; pointer-events:none;';
     }
 
-    showToast('Modo feedback activado. Toca la web para comentar.', 'info');
-    console.log('[Mobile] → Feedback OK');
+    // Show the floating "Place Pin" button
+    if (fab) {
+      fab.style.display = 'flex';
+    } else {
+      createMobilePinFAB();
+    }
+
+    showToast('Scrollea la web. Toca 📌 para colocar un pin.', 'info');
+  }
+}
+
+// ── Floating Action Button for mobile pin placement ──
+function createMobilePinFAB() {
+  const fab = document.createElement('button');
+  fab.id = 'mobile-pin-fab';
+  fab.innerHTML = '📌';
+  fab.style.cssText = `
+    position: fixed;
+    bottom: 80px;
+    right: 16px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: none;
+    background: #e53e3e;
+    color: white;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2147483647;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  `;
+  
+  fab.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleMobilePinMode();
+  });
+  
+  document.body.appendChild(fab);
+}
+
+function toggleMobilePinMode() {
+  _mobilePinMode = !_mobilePinMode;
+  const fab = document.getElementById('mobile-pin-fab');
+  
+  if (_mobilePinMode) {
+    // ACTIVATE overlay for pin placement (blocks scroll temporarily)
+    if (clickOverlay) {
+      clickOverlay.style.cssText = 'display:block; pointer-events:auto; cursor:crosshair;';
+    }
+    if (fab) {
+      fab.style.background = '#38a169';
+      fab.innerHTML = '✕';
+      fab.title = 'Cancelar';
+    }
+    showToast('Toca la web para colocar el pin. Toca ✕ para cancelar.', 'info');
+  } else {
+    // DEACTIVATE overlay (restore scroll)
+    if (clickOverlay) {
+      clickOverlay.style.cssText = 'display:block; pointer-events:none; cursor:default;';
+    }
+    if (fab) {
+      fab.style.background = '#e53e3e';
+      fab.innerHTML = '📌';
+      fab.title = 'Colocar pin';
+    }
+  }
+}
+
+// ── Auto-deactivate pin mode after placing a pin (mobile only) ──
+function deactivateMobilePinMode() {
+  if (!isMobile() || !_mobilePinMode) return;
+  _mobilePinMode = false;
+  if (clickOverlay) {
+    clickOverlay.style.cssText = 'display:block; pointer-events:none; cursor:default;';
+  }
+  const fab = document.getElementById('mobile-pin-fab');
+  if (fab) {
+    fab.style.background = '#e53e3e';
+    fab.innerHTML = '📌';
   }
 }
 
@@ -1110,32 +1183,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('close-sidebar').addEventListener('click', toggleSidebar);
   clickOverlay.addEventListener('click', handleOverlayClick);
-
-  // ── Overlay touch interceptor: redirect toolbar-zone touches to tab buttons ──
-  if (clickOverlay) {
-    clickOverlay.addEventListener('touchstart', (e) => {
-      if (!isMobile()) return;
-      const toolbar = document.getElementById('client-toolbar');
-      if (!toolbar) return;
-      
-      const touch = e.touches[0];
-      const toolbarTop = toolbar.getBoundingClientRect().top;
-      
-      // Touch is in the toolbar zone → redirect, don't create pin
-      if (touch.clientY >= toolbarTop) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        if (touch.clientX < window.innerWidth / 2) {
-          console.log('[Touch→Tab] Entregables');
-          switchMobileTab('entregables');
-        } else {
-          console.log('[Touch→Tab] Feedback');
-          switchMobileTab('feedback');
-        }
-      }
-    }, { passive: false, capture: true });
-  }
 
   // ── Thread Detail Listeners ──
   document.getElementById('thread-back-btn').addEventListener('click', closeThreadDetail);
