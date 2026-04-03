@@ -1589,32 +1589,47 @@ a:hover {
   flex: 1;
   position: relative;
   background: var(--bg-primary);
-  overflow: hidden;    /* Prevent any overflow from breaking layout */
-  min-width: 0;        /* Respect flex shrinking */
+  overflow: hidden;
+  min-width: 0;
 }
 
-.iframe-area iframe {
+/* ── Scroll Wrapper Proxy (the "Optical Illusion Hack") ──
+   This div is the REAL scroll container. It holds the stretched iframe,
+   the click overlay, and the pins container — all at 6000px tall.
+   When the user scrolls this wrapper, the iframe image AND the overlay
+   move together, so pins never desync from the content. */
+#iframe-scroll-wrapper {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  border: none;
-  z-index: 1;
-  /* The iframe acts as its own viewport — do NOT add scrolling="no" or 
-     force an artificial height in the HTML. The child site scrolls inside 
-     this natural viewport just like a browser tab. */
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch; /* smooth iOS scroll */
 }
 
+/* The iframe is "unrolled" — its internal scroll is killed (scrolling="no")
+   and it's stretched tall so the wrapper scrolls the visible window over it. */
+#iframe-scroll-wrapper iframe {
+  display: block;
+  width: 100%;
+  height: 6000px !important;
+  border: none;
+  overflow: hidden !important;
+  pointer-events: auto;
+}
+
+/* Overlay covers the entire stretched iframe like a sheet of glass */
 .click-overlay {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
-  height: 100%;
+  height: 6000px !important;  /* Must match iframe */
   z-index: 10;
-  pointer-events: none; /* Disabled by default, toggled via JS */
-  touch-action: pan-y pinch-zoom; /* Allow scroll to pass through to iframe */
+  pointer-events: none;
+  touch-action: pan-y pinch-zoom;
 }
 
 /* ── NUCLEAR: clase para ocultar la barra cuando el teclado está abierto ── */
@@ -1628,11 +1643,10 @@ a:hover {
   top: 0;
   left: 0;
   width: 100%;
-  height: 100%;
+  height: 6000px !important;  /* Must match iframe */
   pointer-events: none;
   z-index: 20;
-  will-change: transform;    /* GPU-accelerated scroll transform */
-  overflow: visible;          /* Pins at y>100% must remain paintable */
+  overflow: visible;
 }
 
 .feedback-pin {
