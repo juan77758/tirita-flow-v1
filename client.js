@@ -1003,6 +1003,7 @@ function isMobile() {
 
 function switchMobileTab(tab) {
   if (!isMobile()) return;
+  console.log('[Mobile] switchMobileTab called:', tab);
 
   const iframeArea = document.getElementById('iframe-area');
   const sidebarBtn = document.getElementById('toggle-sidebar-btn');
@@ -1011,34 +1012,51 @@ function switchMobileTab(tab) {
   currentMobileTab = tab;
 
   if (tab === 'entregables') {
-    // Show sidebar, hide iframe
+    // ── SHOW sidebar, HIDE iframe ──
     sidebar.classList.remove('mobile-hidden');
     iframeArea.classList.add('mobile-hidden');
-    sidebarBtn.classList.add('active');
-    feedbackBtn.classList.remove('active');
 
-    // NUCLEAR: Hard-kill feedback mode + overlay
+    // ── SYNC ALL BUTTON STATES ──
+    sidebarBtn.classList.add('active');
+    sidebarBtn.innerHTML = '📋 Entregables';
+    feedbackBtn.classList.remove('active');
+    feedbackBtn.innerHTML = '📌 Feedback';
+
+    // ── KILL OVERLAY: display + pointer + visibility + opacity ──
     feedbackMode = false;
-    clickOverlay.style.display = 'none';
-    clickOverlay.style.pointerEvents = 'none';
-    clickOverlay.style.cursor = 'default';
-    pinsContainer.style.display = 'none';
+    if (clickOverlay) {
+      clickOverlay.style.cssText = 'display:none !important; pointer-events:none !important; visibility:hidden !important; opacity:0 !important;';
+    }
+    if (pinsContainer) {
+      pinsContainer.style.cssText = 'display:none !important; visibility:hidden !important;';
+    }
+
+    // ── RESTORE SCROLL on iframe area ──
+    iframeArea.style.overflowY = 'auto';
+    
+    console.log('[Mobile] Entregables: overlay killed, feedbackMode=false');
   } else {
-    // Show iframe, hide sidebar
+    // ── SHOW iframe, HIDE sidebar ──
     sidebar.classList.add('mobile-hidden');
     iframeArea.classList.remove('mobile-hidden');
-    sidebarBtn.classList.remove('active');
-    feedbackBtn.classList.add('active');
 
-    // NUCLEAR: Hard-show overlay + activate feedback
-    clickOverlay.style.display = 'block';
-    pinsContainer.style.display = 'block';
-    if (!feedbackMode) {
-      feedbackMode = true;
-      clickOverlay.style.pointerEvents = 'auto';
-      clickOverlay.style.cursor = 'crosshair';
-      showToast('Modo feedback activado. Toca la web para comentar.', 'info');
+    // ── SYNC ALL BUTTON STATES ──
+    sidebarBtn.classList.remove('active');
+    sidebarBtn.innerHTML = '📋 Entregables';
+    feedbackBtn.classList.add('active');
+    feedbackBtn.innerHTML = '📌 Feedback <span style="font-size:10px;opacity:0.7">(activo)</span>';
+
+    // ── RESURRECT OVERLAY ──
+    feedbackMode = true;
+    if (clickOverlay) {
+      clickOverlay.style.cssText = 'display:block; pointer-events:auto; visibility:visible; opacity:1; cursor:crosshair;';
     }
+    if (pinsContainer) {
+      pinsContainer.style.cssText = 'display:block; visibility:visible;';
+    }
+
+    showToast('Modo feedback activado. Toca la web para comentar.', 'info');
+    console.log('[Mobile] Feedback: overlay active, feedbackMode=true');
   }
 }
 
@@ -1065,21 +1083,32 @@ document.addEventListener('DOMContentLoaded', () => {
   const sidebarBtn = document.getElementById('toggle-sidebar-btn');
   const feedbackBtn = document.getElementById('toggle-feedback-btn');
 
-  sidebarBtn.addEventListener('click', () => {
+  // ── Handler functions ──
+  function handleSidebarBtnPress(e) {
+    console.log('[Toolbar] Sidebar btn pressed, event:', e.type);
+    if (e.type === 'touchstart') e.preventDefault(); // prevent ghost click
     if (isMobile()) {
       switchMobileTab('entregables');
     } else {
       toggleSidebar();
     }
-  });
+  }
 
-  feedbackBtn.addEventListener('click', () => {
+  function handleFeedbackBtnPress(e) {
+    console.log('[Toolbar] Feedback btn pressed, event:', e.type);
+    if (e.type === 'touchstart') e.preventDefault(); // prevent ghost click
     if (isMobile()) {
       switchMobileTab('feedback');
     } else {
       toggleFeedbackMode();
     }
-  });
+  }
+
+  // ── Attach both click AND touchstart for mobile reliability ──
+  sidebarBtn.addEventListener('click', handleSidebarBtnPress);
+  sidebarBtn.addEventListener('touchstart', handleSidebarBtnPress, { passive: false });
+  feedbackBtn.addEventListener('click', handleFeedbackBtnPress);
+  feedbackBtn.addEventListener('touchstart', handleFeedbackBtnPress, { passive: false });
 
   document.getElementById('close-sidebar').addEventListener('click', toggleSidebar);
   clickOverlay.addEventListener('click', handleOverlayClick);
