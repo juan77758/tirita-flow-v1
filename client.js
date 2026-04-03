@@ -1113,6 +1113,34 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('close-sidebar').addEventListener('click', toggleSidebar);
   clickOverlay.addEventListener('click', handleOverlayClick);
 
+  // ── CRITICAL FIX: Overlay eats touches meant for the toolbar ──
+  // Intercept touches on the overlay, check if they're in the toolbar zone,
+  // and route them to the correct tab button instead.
+  clickOverlay.addEventListener('touchstart', (e) => {
+    if (!isMobile()) return;
+    const toolbar = document.getElementById('client-toolbar');
+    if (!toolbar) return;
+    
+    const toolbarRect = toolbar.getBoundingClientRect();
+    const touch = e.touches[0];
+    
+    // If touch is in the toolbar Y zone → route to buttons, NOT to pin creation
+    if (touch.clientY >= toolbarRect.top) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const midX = window.innerWidth / 2;
+      if (touch.clientX < midX) {
+        console.log('[TouchFix] Redirecting overlay touch → Entregables');
+        switchMobileTab('entregables');
+      } else {
+        console.log('[TouchFix] Redirecting overlay touch → Feedback');
+        switchMobileTab('feedback');
+      }
+      return;
+    }
+  }, { passive: false, capture: true });
+
   // ── Thread Detail Listeners ──
   document.getElementById('thread-back-btn').addEventListener('click', closeThreadDetail);
   document.getElementById('thread-btn-approve').addEventListener('click', () => updateDeliverableStatus('approved'));
