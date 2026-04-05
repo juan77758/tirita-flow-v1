@@ -1,6 +1,8 @@
 // =============================================
 // TIRITA FLOW - Client Portal (Supabase + Drive BYOD)
+// VERSION: fix3_20260405 — Simulation PURGED, project-scoped queries
 // =============================================
+console.log('%c[TIRITA] client.js v=fix3_20260405 loaded — NO simulation mode', 'background:#0f0;color:#000;font-weight:bold;padding:4px 8px;');
 
 // ── State ──
 let projectData = null;
@@ -333,6 +335,12 @@ async function openThreadDetail(itemId) {
   const item = checklistItems.find(i => i.id === itemId);
   if (!item) return;
 
+  // ── CRITICAL: Clear stale state BEFORE rendering new thread ──
+  threadMessages = [];
+  threadFileVersions = [];
+  const timeline = document.getElementById('thread-timeline');
+  if (timeline) timeline.innerHTML = '';
+
   // Show detail panel as a separate column (master stays visible)
   const detailPanel = document.getElementById('detail-panel');
   detailPanel.classList.add('active');
@@ -347,7 +355,7 @@ async function openThreadDetail(itemId) {
   // Highlight active card in master list
   renderChecklist();
 
-  // Fetch thread data
+  // Fetch thread data (isolated by project_id)
   await fetchThreadData(itemId);
 }
 
@@ -355,6 +363,10 @@ function closeThreadDetail() {
   activeThreadItemId = null;
   threadMessages = [];
   threadFileVersions = [];
+
+  // ── CRITICAL: Clear timeline DOM to prevent ghost messages ──
+  const timeline = document.getElementById('thread-timeline');
+  if (timeline) timeline.innerHTML = '';
 
   // Hide detail panel
   document.getElementById('detail-panel').classList.remove('active');
@@ -364,26 +376,41 @@ function closeThreadDetail() {
 }
 
 async function fetchThreadData(itemId) {
+  // ── GUARD: Abort if projectId is not yet loaded ──
+  if (!projectId) {
+    console.error('[Thread] ABORT: projectId is null — cannot fetch without project scope');
+    showToast('Error: proyecto no cargado.', 'error');
+    return;
+  }
+
   try {
-    // Fetch file versions
+    // ── SINGLE SOURCE OF TRUTH: Always filter by BOTH item_id AND project_id ──
+    // This is the ONLY function that fetches thread data. Both initial load
+    // and post-upload refresh flow through here.
+
+    // Fetch file versions (strictly isolated by project)
     const { data: versions, error: vErr } = await window.supabaseClient
       .from('file_versions')
       .select('*')
       .eq('item_id', itemId)
+      .eq('project_id', projectId)
       .order('version_number', { ascending: true });
 
     if (vErr) throw vErr;
     threadFileVersions = versions || [];
 
-    // Fetch thread messages
+    // Fetch thread messages (strictly isolated by project)
     const { data: messages, error: mErr } = await window.supabaseClient
       .from('thread_messages')
       .select('*')
       .eq('item_id', itemId)
+      .eq('project_id', projectId)
       .order('created_at', { ascending: true });
 
     if (mErr) throw mErr;
     threadMessages = messages || [];
+
+    console.log(`[Thread] Loaded ${threadFileVersions.length} versions, ${threadMessages.length} messages for item=${itemId} project=${projectId}`);
 
     renderThread();
   } catch (err) {
@@ -443,11 +470,23 @@ function renderThread() {
   // ── Timeline ──
   const timeline = document.getElementById('thread-timeline');
 
+  // ── EMPTY STATE CHECK (FIRST — before building events array) ──
+  // If Supabase returned zero messages AND zero file versions for this
+  // project+item combo, show clean empty state immediately and return.
   if (threadMessages.length === 0 && threadFileVersions.length === 0) {
-    // We will let the simulation handle the empty state, so no early return here anymore.
+    timeline.innerHTML = `
+      <div style="text-align:center;padding:40px 20px;color:var(--text-muted);">
+        <div style="font-size:32px;margin-bottom:12px;">💬</div>
+        <p style="font-size:14px;margin:0;">Aún no hay mensajes en este hilo.</p>
+        <p style="font-size:12px;margin:4px 0 0 0;opacity:0.7;">Envía el primer comentario para iniciar la conversación.</p>
+      </div>
+    `;
+    const commentCountEl = document.getElementById('thread-comment-count-display');
+    if (commentCountEl) commentCountEl.textContent = 'Comentarios (0)';
+    return; // ← Hard stop. No events array, no rendering, no contamination.
   }
 
-  // Build a unified chronological timeline
+  // Build a unified chronological timeline from REAL data only
   const events = [];
 
   // Add file version events that don't have a corresponding message
@@ -472,36 +511,6 @@ function renderThread() {
 
   // Sort chronologically
   events.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-
-  // --- SIMULATION MODE (when no real data exists) ---
-  if (events.length === 0) {
-    events.push({
-      message_type: 'comment', sender_type: 'client', sender_name: 'Cliente',
-      message_text: 'Hola, adjunto la estructura solicitada para el logo.',
-      created_at: new Date(Date.now() - 3600000).toISOString()
-    });
-    events.push({
-      message_type: 'comment', sender_type: 'agency', sender_name: 'Agencia',
-      message_text: '¡Recibido! Lo revisamos y te damos feedback pronto. 👍',
-      created_at: new Date(Date.now() - 2700000).toISOString()
-    });
-    events.push({
-      message_type: 'comment', sender_type: 'client', sender_name: 'Cliente',
-      message_text: 'Perfecto, quedo atento.',
-      created_at: new Date(Date.now() - 1800000).toISOString()
-    });
-    events.push({
-      message_type: 'comment', sender_type: 'agency', sender_name: 'Agencia',
-      message_text: 'Ojo con el color del fondo, necesitamos que sea más oscuro para contraste.',
-      created_at: new Date(Date.now() - 900000).toISOString()
-    });
-    events.push({
-      message_type: 'comment', sender_type: 'client', sender_name: 'Cliente',
-      message_text: 'creo que ya, lo ajusté. ¿Puedes revisar?',
-      created_at: new Date(Date.now() - 300000).toISOString()
-    });
-  }
-  // -------------------------
 
   const commentCountEl = document.getElementById('thread-comment-count-display');
   if (commentCountEl) {
