@@ -1,8 +1,8 @@
 // =============================================
 // TIRITA FLOW - Client Portal (Supabase + Drive BYOD)
-// VERSION: fix3_20260405 — Simulation PURGED, project-scoped queries
+// VERSION: lightbox_20260405 — Lightbox image viewer + simulation purge
 // =============================================
-console.log('%c[TIRITA] client.js v=fix3_20260405 loaded — NO simulation mode', 'background:#0f0;color:#000;font-weight:bold;padding:4px 8px;');
+console.log('%c[TIRITA] client.js v=lightbox_20260405 loaded', 'background:#0f0;color:#000;font-weight:bold;padding:4px 8px;');
 
 // ── State ──
 let projectData = null;
@@ -537,7 +537,7 @@ function renderThread() {
     const senderLabel = isAgency ? 'Agencia' : (isSystem ? 'Sistema' : 'Cliente');
     const time = formatTimeAgo(ev.created_at);
     const fileLink = ev.file_url
-      ? `<a href="${ev.file_url}" target="_blank" class="thread-msg-file-link">📎 Ver archivo</a>`
+      ? `<a href="${ev.file_url}" target="_blank" class="thread-msg-file-link" data-file-url="${ev.file_url}">📎 Ver archivo</a>`
       : '';
 
     return `
@@ -567,6 +567,72 @@ function formatTimeAgo(dateStr) {
   if (diff < 3600) return `hace ${Math.floor(diff / 60)}m`;
   if (diff < 86400) return `hace ${Math.floor(diff / 3600)}h`;
   return d.toLocaleDateString('es', { day: 'numeric', month: 'short' });
+}
+
+// ═══════════════════════════════════════════
+// LIGHTBOX — Full-screen Image Viewer
+// ═══════════════════════════════════════════
+const IMAGE_EXTENSIONS = /\.(jpe?g|png|gif|webp|jfif|bmp|svg|avif)(\?.*)?$/i;
+
+function isImageUrl(url) {
+  if (!url) return false;
+  try {
+    const pathname = new URL(url).pathname;
+    return IMAGE_EXTENSIONS.test(pathname);
+  } catch {
+    // If URL parsing fails, test the raw string
+    return IMAGE_EXTENSIONS.test(url);
+  }
+}
+
+function openLightbox(url) {
+  const overlay = document.getElementById('lightbox-overlay');
+  const img = document.getElementById('lightbox-img');
+  const filename = document.getElementById('lightbox-filename');
+
+  // Extract filename from URL
+  try {
+    const parts = new URL(url).pathname.split('/');
+    filename.textContent = decodeURIComponent(parts[parts.length - 1] || 'Imagen');
+  } catch {
+    filename.textContent = 'Imagen';
+  }
+
+  img.src = url;
+
+  // Show overlay — use rAF to trigger CSS transition
+  overlay.style.display = 'flex';
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      overlay.classList.add('active');
+    });
+  });
+
+  // Lock body scroll
+  document.body.style.overflow = 'hidden';
+}
+
+function closeLightbox() {
+  const overlay = document.getElementById('lightbox-overlay');
+  overlay.classList.remove('active');
+
+  // Wait for fade-out transition before hiding
+  setTimeout(() => {
+    overlay.style.display = 'none';
+    document.getElementById('lightbox-img').src = '';
+  }, 250);
+
+  // Restore body scroll
+  document.body.style.overflow = '';
+}
+
+function handleFileClick(e, url) {
+  if (isImageUrl(url)) {
+    e.preventDefault();
+    e.stopPropagation();
+    openLightbox(url);
+  }
+  // Non-image files → default behavior (download/new tab)
 }
 
 async function sendThreadComment() {
@@ -1193,6 +1259,38 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   document.getElementById('thread-file-input').addEventListener('change', uploadThreadVersion);
+
+  // ── Lightbox Event Listeners ──
+  // Close button
+  document.getElementById('lightbox-close').addEventListener('click', closeLightbox);
+
+  // Click outside image (on overlay background) → close
+  document.getElementById('lightbox-overlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeLightbox();
+  });
+
+  // Escape key → close
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const overlay = document.getElementById('lightbox-overlay');
+      if (overlay.classList.contains('active')) closeLightbox();
+    }
+  });
+
+  // Event delegation: intercept clicks on chat file links
+  document.getElementById('thread-timeline').addEventListener('click', (e) => {
+    const link = e.target.closest('.thread-msg-file-link');
+    if (link) {
+      const url = link.getAttribute('data-file-url') || link.href;
+      handleFileClick(e, url);
+    }
+  });
+
+  // Intercept main file download button
+  document.getElementById('thread-file-download').addEventListener('click', (e) => {
+    const url = e.currentTarget.href;
+    handleFileClick(e, url);
+  });
 
   // Listen for viewport changes (rotate device, resize window)
   mobileQuery.addEventListener('change', handleMobileResize);

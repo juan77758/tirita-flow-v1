@@ -182,10 +182,16 @@
     </div>
   </div>
 
+  <!-- ═══ LIGHTBOX MODAL ═══ -->
+  <div class="lightbox-overlay" id="lightbox-overlay">
+    <button class="lightbox-close" id="lightbox-close" aria-label="Cerrar">&times;</button>
+    <img class="lightbox-img" id="lightbox-img" src="" alt="Vista previa" />
+    <div class="lightbox-filename" id="lightbox-filename"></div>
+  </div>
+
   <!-- Scripts: Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- v=fix3 cache-bust: forces browser to fetch fresh JS after purging simulation code -->
-  <script src="config.js?v=fix3_20260405_nocache"></script>
-  <script src="client.js?v=fix3_20260405_nocache"></script>
+  <script src="config.js?v=lightbox_20260405"></script>
+  <script src="client.js?v=lightbox_20260405"></script>
 </body>
 </html>
